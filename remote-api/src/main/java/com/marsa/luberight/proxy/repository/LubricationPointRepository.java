@@ -17,7 +17,7 @@ public interface LubricationPointRepository extends JpaRepository<Admin, Integer
             latestCal.ActualInterval AS [interval],
             latestCal.ActualInterval AS actualInterval,
             latestCal.Lubricator AS lubricator,
-            latestCal.PlannedAmount AS plannedAmount,
+            COALESCE(latestCal.PlannedAmount, latestPlanned.PlannedAmount) AS plannedAmount,
             latestCal.ActualAmount AS actualAmount,
             latestCal.[TimeStamp] AS [timestamp]
           FROM dbo.Admin adm
@@ -36,9 +36,37 @@ public interface LubricationPointRepository extends JpaRepository<Admin, Integer
               cal.[TimeStamp] DESC,
               cal.[Index] DESC
           ) AS latestCal
+          OUTER APPLY (
+            SELECT TOP (1)
+              cal.PlannedAmount
+            FROM dbo.Calender cal
+            WHERE cal.AdminIndex = adm.[Index]
+              AND cal.PlannedAmount IS NOT NULL
+            ORDER BY cal.[TimeStamp] DESC, cal.[Index] DESC
+          ) AS latestPlanned
           WHERE adm.Active = 1
             AND (:updatedAfter IS NULL OR latestCal.[TimeStamp] > :updatedAfter)
           """,
       nativeQuery = true)
   List<LubricationPointView> findLatest(@Param("updatedAfter") LocalDateTime updatedAfter);
+
+  @Query(
+      value =
+          """
+          SELECT
+            adm.Name AS name,
+            cal.ActualInterval AS [interval],
+            cal.ActualInterval AS actualInterval,
+            cal.Lubricator AS lubricator,
+            cal.PlannedAmount AS plannedAmount,
+            cal.ActualAmount AS actualAmount,
+            cal.[TimeStamp] AS [timestamp]
+          FROM dbo.Calender cal
+          INNER JOIN dbo.Admin adm ON adm.[Index] = cal.AdminIndex
+          WHERE (:updatedAfter IS NULL OR cal.[TimeStamp] > :updatedAfter)
+          ORDER BY cal.[TimeStamp] ASC, cal.[Index] ASC
+          """,
+      nativeQuery = true)
+  List<LubricationPointView> findCalenderHistory(
+      @Param("updatedAfter") LocalDateTime updatedAfter);
 }

@@ -153,9 +153,11 @@ UI dispo sur `http://localhost:5173`.
 Le backend fait maintenant deux actions a chaque cycle:
 
 - rafraichissement complet des snapshots (`fetchData(null)`) pour capter les changements `Admin.Amount` et `Admin.Interval`.
-- sync incremental base sur `updatedAfter` pour l historique `calender_snapshot`.
+- initialisation complete de `calender_snapshot` au premier demarrage/cache vide via `GET /api/calender/history`, qui lit toutes les lignes de `dbo.Calender`.
+- sync incremental base sur `updatedAfter` via `GET /api/calender/history` pour l historique `calender_snapshot`.
 
-Conclusion: aucun changement obligatoire dans `remote-api` pour ce correctif.
+Le flux historique renseigne toutes les colonnes actuellement definies dans `calender_snapshot`:
+`name`, `timestamp_value`, `actual_interval`, `lubricator`, `planned_amount`, `actual_amount`.
 
 ## 6) Verification fonctionnelle conseillee
 

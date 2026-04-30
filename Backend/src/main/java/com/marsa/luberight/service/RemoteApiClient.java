@@ -22,12 +22,20 @@ public class RemoteApiClient {
   }
 
   public List<RemoteLubricationPointPayload> fetchData(LocalDateTime updatedAfter) {
+    return fetch("/api/data", updatedAfter);
+  }
+
+  public List<RemoteLubricationPointPayload> fetchCalenderHistory(LocalDateTime updatedAfter) {
+    return fetch("/api/calender/history", updatedAfter);
+  }
+
+  private List<RemoteLubricationPointPayload> fetch(String path, LocalDateTime updatedAfter) {
     try {
       return remoteApiWebClient
           .get()
           .uri(
               uriBuilder -> {
-                uriBuilder.path("/api/data");
+                uriBuilder.path(path);
                 if (updatedAfter != null) {
                   uriBuilder.queryParam("updatedAfter", updatedAfter);
                 }
@@ -39,13 +47,14 @@ public class RemoteApiClient {
           .block();
     } catch (WebClientResponseException ex) {
       log.error(
-          "Remote API responded with status {} and body {}",
+          "Remote API {} responded with status {} and body {}",
+          path,
           ex.getStatusCode(),
           ex.getResponseBodyAsString(),
           ex);
       return Collections.emptyList();
     } catch (Exception ex) {
-      log.error("Remote API call failed", ex);
+      log.error("Remote API {} call failed", path, ex);
       return Collections.emptyList();
     }
   }

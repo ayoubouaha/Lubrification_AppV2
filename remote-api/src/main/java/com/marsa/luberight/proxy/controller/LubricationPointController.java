@@ -26,4 +26,12 @@ public class LubricationPointController {
           LocalDateTime updatedAfter) {
     return ResponseEntity.ok(service.fetch(updatedAfter));
   }
+
+  @GetMapping("/api/calender/history")
+  public ResponseEntity<List<LubricationPointResponse>> findCalenderHistory(
+      @RequestParam(value = "updatedAfter", required = false)
+          @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+          LocalDateTime updatedAfter) {
+    return ResponseEntity.ok(service.fetchCalenderHistory(updatedAfter));
+  }
 }

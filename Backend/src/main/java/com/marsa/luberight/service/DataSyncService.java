@@ -51,8 +51,10 @@ public class DataSyncService {
   @Scheduled(fixedDelayString = "${sync.interval:5000}")
   @Transactional
   public void sync() {
-    SyncMetadata metadata = metadataRepository.findById(SYNC_ID).orElseGet(() -> new SyncMetadata(SYNC_ID));
+    SyncMetadata metadata =
+        metadataRepository.findById(SYNC_ID).orElseGet(() -> new SyncMetadata(SYNC_ID));
     LocalDateTime lastSync = metadata.getLastSyncTimestamp();
+    boolean needsInitialHistorySync = lastSync == null || calenderSnapshotRepository.count() == 0;
 
     // Always refresh latest snapshots so source updates are not missed when no new
     // Calender timestamp exists.
@@ -62,21 +64,32 @@ public class DataSyncService {
       latestPayload.forEach(this::upsertCalender);
     }
 
-    List<RemoteLubricationPointPayload> incrementalPayload;
-    if (lastSync == null) {
-      incrementalPayload = latestPayload;
-    } else {
-      incrementalPayload = remoteApiClient.fetchData(lastSync);
+    if (needsInitialHistorySync) {
+      List<RemoteLubricationPointPayload> initialPayload = remoteApiClient.fetchCalenderHistory(null);
+      if (initialPayload == null || initialPayload.isEmpty()) {
+        log.warn("Initial Calender history sync returned no rows; metadata timestamp was not advanced");
+        return;
+      }
+
+      initialPayload.forEach(this::upsertCalender);
+      updateLastSync(metadata, initialPayload);
+      return;
     }
 
+    List<RemoteLubricationPointPayload> incrementalPayload =
+        remoteApiClient.fetchCalenderHistory(lastSync);
     if (incrementalPayload == null || incrementalPayload.isEmpty()) {
       return;
     }
 
     incrementalPayload.forEach(this::upsertCalender);
+    updateLastSync(metadata, incrementalPayload);
+  }
 
+  private void updateLastSync(
+      SyncMetadata metadata, List<RemoteLubricationPointPayload> calenderPayload) {
     Optional<LocalDateTime> maxTimestamp =
-        incrementalPayload.stream()
+        calenderPayload.stream()
             .map(RemoteLubricationPointPayload::timestamp)
             .filter(ts -> ts != null)
             .max(Comparator.naturalOrder());

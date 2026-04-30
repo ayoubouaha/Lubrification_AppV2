@@ -23,6 +23,12 @@ public class LubricationPointService {
         .toList();
   }
 
+  public List<LubricationPointResponse> fetchCalenderHistory(LocalDateTime updatedAfter) {
+    return repository.findCalenderHistory(updatedAfter).stream()
+        .map(this::mapToResponse)
+        .toList();
+  }
+
   private LubricationPointResponse mapToResponse(LubricationPointView view) {
     return new LubricationPointResponse(
         view.getName(),
