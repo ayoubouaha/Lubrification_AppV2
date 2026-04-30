@@ -116,9 +116,10 @@ public class DataSyncService {
     CalenderSnapshot calender =
         calenderSnapshotRepository
             .findById(id)
-            .orElseGet(() -> new CalenderSnapshot(id, null, null, null));
+            .orElseGet(() -> new CalenderSnapshot(id, null, null, null, null));
 
     calender.setActualInterval(response.actualInterval());
+    calender.setLubricator(response.lubricator());
     calender.setPlannedAmount(toBigDecimal(response.plannedAmount()));
     calender.setActualAmount(toBigDecimal(response.actualAmount()));
 

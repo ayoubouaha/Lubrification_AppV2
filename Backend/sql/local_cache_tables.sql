@@ -17,10 +17,34 @@ BEGIN
     name NVARCHAR(255) NOT NULL,
     timestamp_value DATETIME2 NOT NULL,
     actual_interval INT NULL,
+    lubricator NVARCHAR(255) NULL,
     planned_amount DECIMAL(19, 2) NULL,
     actual_amount DECIMAL(19, 2) NULL,
     CONSTRAINT PK_calender_snapshot PRIMARY KEY (name, timestamp_value)
   );
+END
+
+IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'calender_snapshot' AND schema_id = SCHEMA_ID('dbo'))
+  AND NOT EXISTS (
+    SELECT 1
+    FROM sys.columns
+    WHERE object_id = OBJECT_ID('dbo.calender_snapshot')
+      AND name = 'lubricator'
+  )
+BEGIN
+  ALTER TABLE dbo.calender_snapshot ADD lubricator NVARCHAR(255) NULL;
+END
+
+IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'calender_snapshot' AND schema_id = SCHEMA_ID('dbo'))
+  AND EXISTS (
+    SELECT 1
+    FROM sys.columns
+    WHERE object_id = OBJECT_ID('dbo.calender_snapshot')
+      AND name = 'lubricator'
+      AND system_type_id <> TYPE_ID('nvarchar')
+  )
+BEGIN
+  ALTER TABLE dbo.calender_snapshot ALTER COLUMN lubricator NVARCHAR(255) NULL;
 END
 
 IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'calender_snapshot' AND schema_id = SCHEMA_ID('dbo'))

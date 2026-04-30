@@ -15,6 +15,9 @@ public class CalenderSnapshot {
   @Column(name = "actual_interval")
   private Integer actualInterval;
 
+  @Column(name = "lubricator")
+  private String lubricator;
+
   @Column(name = "planned_amount")
   private BigDecimal plannedAmount;
 
@@ -28,8 +31,18 @@ public class CalenderSnapshot {
       Integer actualInterval,
       BigDecimal plannedAmount,
       BigDecimal actualAmount) {
+    this(id, actualInterval, null, plannedAmount, actualAmount);
+  }
+
+  public CalenderSnapshot(
+      CalenderSnapshotId id,
+      Integer actualInterval,
+      String lubricator,
+      BigDecimal plannedAmount,
+      BigDecimal actualAmount) {
     this.id = id;
     this.actualInterval = actualInterval;
+    this.lubricator = lubricator;
     this.plannedAmount = plannedAmount;
     this.actualAmount = actualAmount;
   }
@@ -42,6 +55,10 @@ public class CalenderSnapshot {
     return actualInterval;
   }
 
+  public String getLubricator() {
+    return lubricator;
+  }
+
   public BigDecimal getActualAmount() {
     return actualAmount;
   }
@@ -52,6 +69,10 @@ public class CalenderSnapshot {
 
   public void setActualInterval(Integer actualInterval) {
     this.actualInterval = actualInterval;
+  }
+
+  public void setLubricator(String lubricator) {
+    this.lubricator = lubricator;
   }
 
   public void setPlannedAmount(BigDecimal plannedAmount) {

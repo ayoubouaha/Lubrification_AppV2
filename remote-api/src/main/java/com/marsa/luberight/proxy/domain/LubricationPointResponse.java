@@ -6,6 +6,7 @@ public record LubricationPointResponse(
     String name,
     Integer interval,
     Integer actualInterval,
+    String lubricator,
     Double plannedAmount,
     Double actualAmount,
     LocalDateTime timestamp) {}

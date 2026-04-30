@@ -16,6 +16,7 @@ public interface LubricationPointRepository extends JpaRepository<Admin, Integer
             adm.Name AS name,
             latestCal.ActualInterval AS [interval],
             latestCal.ActualInterval AS actualInterval,
+            latestCal.Lubricator AS lubricator,
             latestCal.PlannedAmount AS plannedAmount,
             latestCal.ActualAmount AS actualAmount,
             latestCal.[TimeStamp] AS [timestamp]
@@ -23,6 +24,7 @@ public interface LubricationPointRepository extends JpaRepository<Admin, Integer
           OUTER APPLY (
             SELECT TOP (1)
               cal.ActualInterval,
+              cal.Lubricator,
               cal.PlannedAmount,
               cal.ActualAmount,
               cal.[TimeStamp],
