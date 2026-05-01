@@ -25,9 +25,17 @@ Creer le fichier `remote-api/.env`:
 DB_URL=jdbc:sqlserver://<HOST_SQL>;databaseName=<DB_SOURCE>;encrypt=true;trustServerCertificate=true
 DB_USERNAME=<USER_SQL>
 DB_PASSWORD=<PASSWORD_SQL>
+
+BACKEND_API_BASE_URL=http://localhost:8081
+REMOTE_SYNC_INTERVAL_MS=10800000
+DB_MAX_POOL_SIZE=2
+DB_MIN_IDLE=0
 ```
 
 `remote-api` tourne par defaut sur `http://localhost:8082`.
+
+`REMOTE_SYNC_INTERVAL_MS=10800000` correspond a 3 heures.
+Les valeurs `DB_MAX_POOL_SIZE` et `DB_MIN_IDLE` limitent les connexions SQL gardees par `remote-api`.
 
 ### 2.2 `Backend/.env`
 
@@ -37,16 +45,12 @@ Creer le fichier `Backend/.env`:
 DB_URL=jdbc:sqlserver://<HOST_SQL>;databaseName=<DB_CACHE>;encrypt=true;trustServerCertificate=true
 DB_USERNAME=<USER_SQL>
 DB_PASSWORD=<PASSWORD_SQL>
-
-REMOTE_API_BASE_URL=http://localhost:8082
-SYNC_INTERVAL=5000
 ```
 
 Important:
 
 - `DB_CACHE` est la base locale de cache (pas la base source).
-- `REMOTE_API_BASE_URL` doit pointer vers `remote-api`.
-- `SYNC_INTERVAL` est en millisecondes.
+- Le backend ne lit plus directement `remote-api` en boucle. Il reste disponible et recoit les batchs envoyes par `remote-api`.
 
 ### 2.3 Frontend Vite proxy
 
@@ -112,7 +116,20 @@ sur la base source (`DB_SOURCE`) pour ameliorer les performances de lecture.
 
 ## 4) Ordre de demarrage
 
-### 4.1 Demarrer `remote-api`
+### 4.1 Demarrer `Backend`
+
+```bash
+cd Backend
+mvn spring-boot:run
+```
+
+Test rapide:
+
+```bash
+curl "http://localhost:8081/actuator/health"
+```
+
+### 4.2 Demarrer `remote-api`
 
 ```bash
 cd remote-api
@@ -125,14 +142,7 @@ Test rapide:
 curl "http://localhost:8082/api/data"
 ```
 
-### 4.2 Demarrer `Backend`
-
-```bash
-cd Backend
-mvn spring-boot:run
-```
-
-Test rapide:
+Verifier ensuite que le cache backend est alimente:
 
 ```bash
 curl "http://localhost:8081/api/lubrication/latest/K3-STR-D02"
@@ -150,23 +160,31 @@ UI dispo sur `http://localhost:5173`.
 
 ## 5) Comportement de sync (important)
 
-Le backend fait maintenant deux actions a chaque cycle:
+Le backend reste lance normalement et expose:
 
-- rafraichissement complet des snapshots (`fetchData(null)`) pour capter les changements `Admin.Amount` et `Admin.Interval`.
-- initialisation complete de `calender_snapshot` au premier demarrage/cache vide via `GET /api/calender/history`, qui lit toutes les lignes de `dbo.Calender`.
-- sync incremental base sur `updatedAfter` via `GET /api/calender/history` pour l historique `calender_snapshot`.
+- `GET /api/sync/state`: etat persiste du dernier timestamp synchronise.
+- `POST /api/sync/batch`: reception des donnees envoyees par `remote-api`.
+
+Le `remote-api` reste lance normalement, mais le job de lecture SQL Server ne s execute pas en continu:
+
+- au demarrage, il demande l etat au backend et effectue la premiere synchronisation necessaire.
+- ensuite, il attend `REMOTE_SYNC_INTERVAL_MS` avant chaque nouveau cycle. La valeur par defaut est `10800000` ms, soit 3 heures.
+- apres la premiere synchronisation, les requetes SQL utilisent `updatedAfter` pour lire seulement les nouvelles lignes `Calender` et les snapshots dont le timestamp source est plus recent.
+- le processus `remote-api` ne s arrete pas et ne redemarre pas toutes les 3 heures; seul le job de synchronisation est planifie.
 
 Le flux historique renseigne toutes les colonnes actuellement definies dans `calender_snapshot`:
 `name`, `timestamp_value`, `actual_interval`, `lubricator`, `planned_amount`, `actual_amount`.
 
 ## 6) Verification fonctionnelle conseillee
 
-### Cas A: changement planifie (sans nouvelle ligne Calender)
+### Cas A: changement planifie
 
-1. Mettre a jour `dbo.Admin.Amount` ou `dbo.Admin.Interval`.
-2. Attendre un cycle (`SYNC_INTERVAL`).
+1. Ajouter ou mettre a jour une ligne `dbo.Calender` avec un `TimeStamp` plus recent.
+2. Attendre un cycle (`REMOTE_SYNC_INTERVAL_MS`) ou redemarrer `remote-api` pour forcer un cycle de demarrage.
 3. Appeler `GET /api/lubrication/latest/{name}` sur le backend.
 4. Verifier que `plannedAmount`/`interval` sont mis a jour.
+
+Note: la synchronisation incrementale actuelle utilise `dbo.Calender.TimeStamp` comme repere. Si la base source contient des mises a jour importantes dans d autres tables sans changement de `TimeStamp`, il faut ajouter une colonne de suivi equivalent dans la requete source.
 
 ### Cas B: changement reel
 
@@ -204,10 +222,11 @@ npm run build
 
 # remote-api Service
    -Reads data from SQL Server.
-   -Exposes REST endpoints (e.g., /api/data) for the backend to consume.
+   -Runs one sync at startup, then one sync every 3 hours by default.
+   -Sends new data to the backend through /api/sync/batch.
 
 # Backend Service (with Local DB)
-   -Periodically (every SYNC_INTERVAL milliseconds) fetches data from remote-api.
+   -Receives sync batches from remote-api.
    -Stores this data in its own local cache database (DB_CACHE).
    -Exposes REST endpoints (e.g., /api/lubrication/latest/{name}) for the frontend.
    -Serves data to the frontend from its local cache, not directly from remote-api or SQL Server.

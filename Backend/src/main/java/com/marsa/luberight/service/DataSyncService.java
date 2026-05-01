@@ -5,6 +5,9 @@ import com.marsa.luberight.domain.SyncMetadata;
 import com.marsa.luberight.domain.CalenderSnapshot;
 import com.marsa.luberight.domain.CalenderSnapshotId;
 import com.marsa.luberight.dto.RemoteLubricationPointPayload;
+import com.marsa.luberight.dto.SyncBatchRequest;
+import com.marsa.luberight.dto.SyncIngestResponse;
+import com.marsa.luberight.dto.SyncStateResponse;
 import com.marsa.luberight.repository.CalenderSnapshotRepository;
 import com.marsa.luberight.repository.LubricationPointRepository;
 import com.marsa.luberight.repository.SyncMetadataRepository;
@@ -12,11 +15,11 @@ import jakarta.annotation.PostConstruct;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Comparator;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,17 +29,14 @@ public class DataSyncService {
   private static final Logger log = LoggerFactory.getLogger(DataSyncService.class);
   private static final String SYNC_ID = "lubrication-sync";
 
-  private final RemoteApiClient remoteApiClient;
   private final LubricationPointRepository snapshotRepository;
   private final SyncMetadataRepository metadataRepository;
   private final CalenderSnapshotRepository calenderSnapshotRepository;
 
   public DataSyncService(
-      RemoteApiClient remoteApiClient,
       LubricationPointRepository snapshotRepository,
       SyncMetadataRepository metadataRepository,
       CalenderSnapshotRepository calenderSnapshotRepository) {
-    this.remoteApiClient = remoteApiClient;
     this.snapshotRepository = snapshotRepository;
     this.metadataRepository = metadataRepository;
     this.calenderSnapshotRepository = calenderSnapshotRepository;
@@ -48,48 +48,45 @@ public class DataSyncService {
     metadataRepository.findById(SYNC_ID).orElseGet(() -> metadataRepository.save(new SyncMetadata(SYNC_ID)));
   }
 
-  @Scheduled(fixedDelayString = "${sync.interval:5000}")
   @Transactional
-  public void sync() {
+  public SyncStateResponse getSyncState() {
     SyncMetadata metadata =
         metadataRepository.findById(SYNC_ID).orElseGet(() -> new SyncMetadata(SYNC_ID));
     LocalDateTime lastSync = metadata.getLastSyncTimestamp();
     boolean needsInitialHistorySync = lastSync == null || calenderSnapshotRepository.count() == 0;
 
-    // Always refresh latest snapshots so source updates are not missed when no new
-    // Calender timestamp exists.
-    List<RemoteLubricationPointPayload> latestPayload = remoteApiClient.fetchData(null);
-    if (latestPayload != null && !latestPayload.isEmpty()) {
-      latestPayload.forEach(this::upsertSnapshot);
-      latestPayload.forEach(this::upsertCalender);
+    return new SyncStateResponse(lastSync, needsInitialHistorySync);
+  }
+
+  @Transactional
+  public SyncIngestResponse ingest(SyncBatchRequest request) {
+    SyncMetadata metadata =
+        metadataRepository
+            .findById(SYNC_ID)
+            .orElseGet(() -> metadataRepository.save(new SyncMetadata(SYNC_ID)));
+    List<RemoteLubricationPointPayload> latestPayload =
+        request == null ? Collections.emptyList() : nullSafe(request.latestSnapshots());
+    List<RemoteLubricationPointPayload> calenderPayload =
+        request == null ? Collections.emptyList() : nullSafe(request.calenderHistory());
+
+    latestPayload.forEach(this::upsertSnapshot);
+    calenderPayload.forEach(this::upsertCalender);
+    updateLastSync(metadata, latestPayload, calenderPayload);
+
+    if (metadata.getLastSyncTimestamp() == null && calenderPayload.isEmpty()) {
+      log.warn("Sync batch did not include Calender rows; metadata timestamp was not advanced");
     }
 
-    if (needsInitialHistorySync) {
-      List<RemoteLubricationPointPayload> initialPayload = remoteApiClient.fetchCalenderHistory(null);
-      if (initialPayload == null || initialPayload.isEmpty()) {
-        log.warn("Initial Calender history sync returned no rows; metadata timestamp was not advanced");
-        return;
-      }
-
-      initialPayload.forEach(this::upsertCalender);
-      updateLastSync(metadata, initialPayload);
-      return;
-    }
-
-    List<RemoteLubricationPointPayload> incrementalPayload =
-        remoteApiClient.fetchCalenderHistory(lastSync);
-    if (incrementalPayload == null || incrementalPayload.isEmpty()) {
-      return;
-    }
-
-    incrementalPayload.forEach(this::upsertCalender);
-    updateLastSync(metadata, incrementalPayload);
+    return new SyncIngestResponse(
+        latestPayload.size(), calenderPayload.size(), metadata.getLastSyncTimestamp());
   }
 
   private void updateLastSync(
-      SyncMetadata metadata, List<RemoteLubricationPointPayload> calenderPayload) {
+      SyncMetadata metadata,
+      List<RemoteLubricationPointPayload> latestPayload,
+      List<RemoteLubricationPointPayload> calenderPayload) {
     Optional<LocalDateTime> maxTimestamp =
-        calenderPayload.stream()
+        java.util.stream.Stream.concat(latestPayload.stream(), calenderPayload.stream())
             .map(RemoteLubricationPointPayload::timestamp)
             .filter(ts -> ts != null)
             .max(Comparator.naturalOrder());
@@ -99,6 +96,10 @@ public class DataSyncService {
           metadata.setLastSyncTimestamp(ts);
           metadataRepository.save(metadata);
         });
+  }
+
+  private List<RemoteLubricationPointPayload> nullSafe(List<RemoteLubricationPointPayload> payload) {
+    return payload == null ? Collections.emptyList() : payload;
   }
 
   private void upsertSnapshot(RemoteLubricationPointPayload response) {
