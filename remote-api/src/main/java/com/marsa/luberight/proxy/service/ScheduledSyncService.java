@@ -22,6 +22,7 @@ public class ScheduledSyncService {
   private final LubricationPointService lubricationPointService;
   private final BackendSyncClient backendSyncClient;
   private final AtomicBoolean syncRunning = new AtomicBoolean(false);
+  private final AtomicBoolean backendUnavailable = new AtomicBoolean(false);
 
   public ScheduledSyncService(
       LubricationPointService lubricationPointService, BackendSyncClient backendSyncClient) {
@@ -41,6 +42,15 @@ public class ScheduledSyncService {
     synchronize("scheduled");
   }
 
+  @Scheduled(
+      fixedDelayString = "${remote.sync.retry-ms:5000}",
+      initialDelayString = "${remote.sync.retry-ms:5000}")
+  public void retryBackendConnection() {
+    if (backendUnavailable.get()) {
+      synchronize("backend retry");
+    }
+  }
+
   private void synchronize(String trigger) {
     if (!syncRunning.compareAndSet(false, true)) {
       log.info("Skipping {} synchronization because another sync is already running", trigger);
@@ -49,6 +59,7 @@ public class ScheduledSyncService {
 
     try {
       BackendSyncState state = backendSyncClient.getState();
+      markBackendAvailable();
       LocalDateTime updatedAfter =
           state != null && !state.initialHistorySyncRequired() ? state.lastSyncTimestamp() : null;
 
@@ -69,10 +80,27 @@ public class ScheduledSyncService {
           response.latestSnapshotCount(),
           response.calenderHistoryCount(),
           response.lastSyncTimestamp());
+    } catch (BackendUnavailableException ex) {
+      markBackendUnavailable();
     } catch (Exception ex) {
       log.error("{} synchronization failed", trigger, ex);
     } finally {
       syncRunning.set(false);
+    }
+  }
+
+  private void markBackendUnavailable() {
+    if (backendUnavailable.compareAndSet(false, true)) {
+      log.warn("Backend is not available yet. Waiting for connection...");
+      return;
+    }
+
+    log.warn("Backend is not available yet. Waiting for connection...");
+  }
+
+  private void markBackendAvailable() {
+    if (backendUnavailable.compareAndSet(true, false)) {
+      log.info("Backend is available. Resuming synchronization...");
     }
   }
 }

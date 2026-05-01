@@ -28,6 +28,9 @@ DB_PASSWORD=<PASSWORD_SQL>
 
 BACKEND_API_BASE_URL=http://localhost:8081
 REMOTE_SYNC_INTERVAL_MS=10800000
+REMOTE_SYNC_RETRY_MS=5000
+BACKEND_CONNECT_TIMEOUT_MS=3000
+BACKEND_READ_TIMEOUT_MS=3000
 DB_MAX_POOL_SIZE=2
 DB_MIN_IDLE=0
 ```
@@ -35,6 +38,7 @@ DB_MIN_IDLE=0
 `remote-api` tourne par defaut sur `http://localhost:8082`.
 
 `REMOTE_SYNC_INTERVAL_MS=10800000` correspond a 3 heures.
+`REMOTE_SYNC_RETRY_MS=5000` permet a `remote-api` de retester la connexion backend toutes les 5 secondes si le backend n est pas encore disponible.
 Les valeurs `DB_MAX_POOL_SIZE` et `DB_MIN_IDLE` limitent les connexions SQL gardees par `remote-api`.
 
 ### 2.2 `Backend/.env`
@@ -168,6 +172,9 @@ Le backend reste lance normalement et expose:
 Le `remote-api` reste lance normalement, mais le job de lecture SQL Server ne s execute pas en continu:
 
 - au demarrage, il demande l etat au backend et effectue la premiere synchronisation necessaire.
+- si le backend n est pas disponible, `remote-api` reste lance et affiche `Backend is not available yet. Waiting for connection...`.
+- pendant cette attente, `remote-api` reteste seulement la connexion backend toutes les `REMOTE_SYNC_RETRY_MS` millisecondes, par defaut 5 secondes.
+- quand le backend redevient disponible, `remote-api` reprend automatiquement et lance la synchronisation sans redemarrage manuel.
 - ensuite, il attend `REMOTE_SYNC_INTERVAL_MS` avant chaque nouveau cycle. La valeur par defaut est `10800000` ms, soit 3 heures.
 - apres la premiere synchronisation, les requetes SQL utilisent `updatedAfter` pour lire seulement les nouvelles lignes `Calender` et les snapshots dont le timestamp source est plus recent.
 - le processus `remote-api` ne s arrete pas et ne redemarre pas toutes les 3 heures; seul le job de synchronisation est planifie.
