@@ -214,6 +214,26 @@ cd remote-api
 mvn -DskipTests clean package
 ```
 
+### 7.1 Lancer les JAR
+
+Important: le fichier `.env` est lu depuis le dossier ou la commande `java -jar` est executee. Les services cherchent aussi `../.env`, donc les deux commandes suivantes fonctionnent.
+
+Depuis le dossier du service:
+
+```bash
+cd remote-api
+java -jar target/luberight-remote-api-0.0.1-SNAPSHOT.jar
+```
+
+Ou depuis `target`:
+
+```bash
+cd remote-api/target
+java -jar luberight-remote-api-0.0.1-SNAPSHOT.jar
+```
+
+Si vous voyez une erreur avec `${DB_URL}`, cela veut dire que le fichier `.env` n est pas trouve ou que les variables `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` ne sont pas definies.
+
 Frontend:
 
 ```bash
