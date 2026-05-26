@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState, useEffect, type MouseEvent as ReactMouseEvent, type WheelEvent as ReactWheelEvent } from 'react';
 import DiagramMarker from '../DiagramMarker/DiagramMarker';
 import { type DiagramPoint } from '../types';
+import { type LubricationPointDto } from '../../../types/lubricationPoint';
 import useOutsideClick from '../../../hooks/useOutsideClick';
 import { useLubricationPoint } from '../../../hooks/useLubricationPoint';
 import { useLubricationPointBatch } from '../../../hooks/useLubricationPointBatch';
@@ -19,6 +20,9 @@ interface InteractiveDiagramProps {
   showHeader?: boolean;
   showPickerWhenHeaderHidden?: boolean;
   onPointClick?: (point: DiagramPoint) => void;
+  onPointHover?: (point: DiagramPoint | null) => void;
+  onLubricationData?: (map: Map<string, LubricationPointDto>) => void;
+  disablePopup?: boolean;
   initialActivePointId?: string;
 }
 const getIdentifiers = (point?: DiagramPoint | null): string[] => {
@@ -49,6 +53,9 @@ const InteractiveDiagram = ({
   showHeader = true,
   showPickerWhenHeaderHidden: _showPickerWhenHeaderHidden = false,
   onPointClick,
+  onPointHover,
+  onLubricationData,
+  disablePopup = false,
   initialActivePointId = '',
 }: InteractiveDiagramProps) => {
   const [activePointId, setActivePointId] = useState<string>('');
@@ -82,6 +89,10 @@ const InteractiveDiagram = ({
 
   // Batch fetch all markers at once (replaces individual polling)
   const { lubricationDataMap } = useLubricationPointBatch(allMarkerDbNames);
+
+  useEffect(() => {
+    onLubricationData?.(lubricationDataMap);
+  }, [lubricationDataMap, onLubricationData]);
 
   const popupIdentifiers = useMemo(() => getIdentifiers(activePoint), [activePoint]);
   const pointDbNames = useMemo(() => getDbNameCandidates(activePoint), [activePoint]);
@@ -244,11 +255,12 @@ const InteractiveDiagram = ({
                     point={point}
                     isActive={point.id === activePoint?.id}
                     onClick={handleMarkerClick}
+                    onHover={onPointHover}
                     lubricationDataMap={lubricationDataMap}
                   />
                 ))}
 
-                {activePoint && hasPopupContent && (
+                {!disablePopup && activePoint && hasPopupContent && (
                   <div
                     ref={popupRef}
                     className="interactive-diagram__popup interactive-diagram__popup--below"

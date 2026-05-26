@@ -1,6 +1,7 @@
 import { useFleetLubricationData } from '../../../hooks/useFleetLubricationData';
 import FleetKpiCards from './FleetKpiCards';
 import ZoneDetailTables from './ZoneDetailTables';
+import DashboardDiagramPanel from './DashboardDiagramPanel';
 import './FleetOverviewPanel.css';
 
 const FleetOverviewPanel = () => {
@@ -18,6 +19,8 @@ const FleetOverviewPanel = () => {
       <FleetKpiCards rows={rows} isLoading={isLoading} />
 
       <ZoneDetailTables rows={rows} isLoading={isLoading} />
+
+      <DashboardDiagramPanel />
     </section>
   );
 };

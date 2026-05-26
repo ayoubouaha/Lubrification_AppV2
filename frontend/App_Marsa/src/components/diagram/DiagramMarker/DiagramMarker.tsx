@@ -9,6 +9,7 @@ interface DiagramMarkerProps {
   point: DiagramPoint;
   isActive: boolean;
   onClick: (point: DiagramPoint) => void;
+  onHover?: (point: DiagramPoint | null) => void;
   lubricationDataMap?: Map<string, LubricationPointDto>;
 }
 
@@ -41,7 +42,7 @@ const resolveMarkerColor = (actualAmount: number | null, plannedAmount: number |
   return green;
 };
 
-const DiagramMarker = ({ point, isActive, onClick, lubricationDataMap }: DiagramMarkerProps) => {
+const DiagramMarker = ({ point, isActive, onClick, onHover, lubricationDataMap }: DiagramMarkerProps) => {
   const defaultColor = point.markerColor ?? "34, 197, 94";
   const dbNameCandidates = useMemo(() => getDbNameCandidates(point), [point]);
 
@@ -72,6 +73,10 @@ const DiagramMarker = ({ point, isActive, onClick, lubricationDataMap }: Diagram
         "--marker-size": `${point.markerScale ?? 1}rem`,
       } as CSSProperties}
       onClick={() => onClick(point)}
+      onMouseEnter={() => onHover?.(point)}
+      onMouseLeave={() => onHover?.(null)}
+      onFocus={() => onHover?.(point)}
+      onBlur={() => onHover?.(null)}
       aria-label={point.name}
     >
       <span className="diagram-marker__pulse" aria-hidden="true" />
