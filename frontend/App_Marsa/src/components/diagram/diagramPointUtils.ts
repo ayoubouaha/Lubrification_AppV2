@@ -107,3 +107,58 @@ export const isCriticalLubricationPoint = (data: LubricationPointDto | null | un
 
   return actual < planned * 0.5;
 };
+
+export type LubricationStatus = 'green' | 'orange' | 'red';
+
+export const STATUS_RGB: Record<LubricationStatus, string> = {
+  green: '34, 197, 94',
+  orange: '245, 158, 11',
+  red: '239, 68, 68',
+};
+
+export const resolveLubricationStatus = (
+  actualAmount: number | null | undefined,
+  plannedAmount: number | null | undefined,
+): LubricationStatus => {
+  if (actualAmount === null || actualAmount === undefined) {
+    return 'red';
+  }
+
+  if (plannedAmount === null || plannedAmount === undefined || plannedAmount <= 0) {
+    return 'green';
+  }
+
+  if (actualAmount >= plannedAmount) {
+    return 'green';
+  }
+
+  const gapPercent = ((plannedAmount - actualAmount) / plannedAmount) * 100;
+  if (gapPercent > 50) {
+    return 'red';
+  }
+
+  if (gapPercent > 10) {
+    return 'orange';
+  }
+
+  return 'green';
+};
+
+export const computeLubricationPercentValue = (
+  actualAmount: number | null | undefined,
+  plannedAmount: number | null | undefined,
+): number | null => {
+  if (actualAmount === null || actualAmount === undefined) {
+    return null;
+  }
+
+  if (plannedAmount === null || plannedAmount === undefined || plannedAmount <= 0) {
+    return 100;
+  }
+
+  if (actualAmount >= plannedAmount) {
+    return 100;
+  }
+
+  return (actualAmount / plannedAmount) * 100;
+};

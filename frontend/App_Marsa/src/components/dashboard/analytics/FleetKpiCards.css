@@ -1,0 +1,117 @@
+.fleet-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.fleet-kpi {
+  --kpi-accent: var(--border-color);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px 22px 18px;
+  background:
+    radial-gradient(120% 120% at 100% 0%, color-mix(in srgb, var(--kpi-accent), transparent 88%), transparent 60%),
+    linear-gradient(160deg, var(--surface-elevated), var(--surface-2));
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(18px);
+  animation: reveal-up 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.fleet-kpi:hover {
+  transform: translateY(-4px);
+  border-color: color-mix(in srgb, var(--kpi-accent), transparent 40%);
+  box-shadow: 0 18px 40px rgba(2, 8, 20, 0.35);
+}
+
+.fleet-kpi__bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--kpi-accent), transparent);
+  transform-origin: left;
+  animation: accent-sweep 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: inherit;
+}
+
+.fleet-kpi--green {
+  --kpi-accent: var(--status-green);
+}
+.fleet-kpi--orange {
+  --kpi-accent: var(--status-orange);
+}
+.fleet-kpi--blue {
+  --kpi-accent: var(--status-blue);
+}
+.fleet-kpi--red {
+  --kpi-accent: var(--status-red);
+}
+
+.fleet-kpi__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.fleet-kpi__label {
+  font-family: var(--font-display);
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.fleet-kpi__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  color: var(--kpi-accent);
+  background: color-mix(in srgb, var(--kpi-accent), transparent 86%);
+}
+
+.fleet-kpi__value {
+  margin: 2px 0 0;
+  font-family: var(--font-mono);
+  font-size: 2.7rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.fleet-kpi__unit {
+  margin-left: 5px;
+  font-size: 1.05rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.fleet-kpi__footnote {
+  margin: 4px 0 0;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+.fleet-kpi__topright {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed color-mix(in srgb, var(--border-color), transparent 30%);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.03em;
+  color: color-mix(in srgb, var(--text-secondary), transparent 15%);
+}

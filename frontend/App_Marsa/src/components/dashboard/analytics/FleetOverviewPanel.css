@@ -1,0 +1,40 @@
+.fleet-overview {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 28px;
+}
+
+.fleet-overview__header {
+  margin-bottom: 18px;
+  opacity: 0;
+  animation: reveal-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.fleet-overview__eyebrow {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-display);
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.fleet-overview__eyebrow::before {
+  content: '';
+  width: 26px;
+  height: 2px;
+  background: var(--accent);
+}
+
+.fleet-overview__title {
+  margin: 8px 0 0;
+  font-family: var(--font-display);
+  font-size: 1.55rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+}

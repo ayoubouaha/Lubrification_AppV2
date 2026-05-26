@@ -19,6 +19,15 @@
   --canvas-top: rgba(23, 37, 58, 0.62);
   --canvas-bottom: rgba(10, 18, 29, 0.84);
   --canvas-stripe: rgba(148, 163, 184, 0.06);
+  --font-display: 'Chakra Petch', 'Segoe UI', Tahoma, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', monospace;
+  --accent: #f5b301;
+  --accent-strong: #ffc933;
+  --accent-soft: rgba(245, 179, 1, 0.14);
+  --status-green: #22c55e;
+  --status-orange: #f59e0b;
+  --status-blue: #3b82f6;
+  --status-red: #ef4444;
   font-family: Manrope, 'Segoe UI', Tahoma, sans-serif;
   line-height: 1.5;
   font-weight: 400;
@@ -85,4 +94,34 @@ body {
   min-width: 320px;
   background: var(--page-bg);
   color: var(--text-primary);
+}
+
+@keyframes reveal-up {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes accent-sweep {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
 }

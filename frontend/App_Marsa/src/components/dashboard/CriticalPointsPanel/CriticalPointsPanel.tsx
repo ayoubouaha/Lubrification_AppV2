@@ -1,33 +1,10 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { type CraneImages } from '../../../config/cranesConfig';
-import { type DiagramPoint } from '../../diagram/types';
-import { type ZoneKey, getZoneDiagramConfig } from '../../diagram/zones/zoneDiagram.config';
-import {
-  ROTATION_DRIVE_GROUPS_LEFT_POINTS,
-  ROTATION_DRIVE_GROUPS_RIGHT_POINTS,
-} from '../../diagram/rotation/rotationDriveGroups.config';
-import {
-  TUKAN_ROTATION_DRIVE_GROUPS_LEFT_POINTS,
-  TUKAN_ROTATION_DRIVE_GROUPS_RIGHT_POINTS,
-} from '../../diagram/rotation/rotationDriveGroups.tukan.config';
-import { RELEVAGE_DRIVE_GROUPS_POINTS } from '../../diagram/relevage/relevageDriveGroups.config';
-import { TUKAN_RELEVAGE_DRIVE_GROUPS_POINTS } from '../../diagram/relevage/relevageDriveGroups.tukan.config';
-import { LEVAGE_DRIVE_GROUPS_POINTS } from '../../diagram/levage/levageDriveGroups.config';
-import { TUKAN_LEVAGE_DRIVE_GROUPS_POINTS } from '../../diagram/levage/levageDriveGroups.tukan.config';
-import {
-  getPouliesDriveGroupsPoints,
-  getPouliesOverviewPoints,
-  getTukanPouliesOverviewPoints,
-} from '../../diagram/poulies/pouliesPoints';
-import { TUKAN_TRANSLATION_ZONE_A_MARKERS } from '../../diagram/translation/tukanTranslationZoneAMarkers';
-import { TUKAN_TRANSLATION_ZONE_B_MARKERS } from '../../diagram/translation/tukanTranslationZoneBMarkers';
-import { TUKAN_TRANSLATION_ZONE_C_MARKERS } from '../../diagram/translation/tukanTranslationZoneCMarkers';
-import { TUKAN_TRANSLATION_ZONE_D_MARKERS } from '../../diagram/translation/tukanTranslationZoneDMarkers';
 import { useLubricationPointBatch } from '../../../hooks/useLubricationPointBatch';
-import { getDbNameCandidates, isCriticalLubricationPoint, pickLubricationData } from '../../diagram/diagramPointUtils';
+import { isCriticalLubricationPoint, pickLubricationData } from '../../diagram/diagramPointUtils';
+import { buildEntries, type FleetEntry } from '../analytics/fleetEntries';
 import { stepToPath } from '../../../navigation/paths';
-import type { StepId } from '../../../navigation/steps';
 import './CriticalPointsPanel.css';
 
 type CriticalPointsPanelProps = {
@@ -35,80 +12,7 @@ type CriticalPointsPanelProps = {
   images: CraneImages;
 };
 
-type CriticalPointEntry = {
-  point: DiagramPoint;
-  label: string;
-  tagLabel: string;
-  sectionLabel: string;
-  stepId: StepId;
-  dbCandidates: string[];
-};
-
-type CriticalEntryWithData = CriticalPointEntry & { data: NonNullable<ReturnType<typeof pickLubricationData>> };
-
-const ZONE_KEYS: ZoneKey[] = ['nord-a', 'sud-b', 'sud-c', 'nord-d'];
-const TUKAN_ZONE_POINTS: Record<ZoneKey, DiagramPoint[]> = {
-  'nord-a': TUKAN_TRANSLATION_ZONE_A_MARKERS,
-  'sud-b': TUKAN_TRANSLATION_ZONE_B_MARKERS,
-  'sud-c': TUKAN_TRANSLATION_ZONE_C_MARKERS,
-  'nord-d': TUKAN_TRANSLATION_ZONE_D_MARKERS,
-};
-
-const makeLabel = (point: DiagramPoint) => {
-  if (point.markerLabel) return point.markerLabel;
-  if (point.name) return point.name;
-  if (point.tagPrimary) return point.tagPrimary;
-  if (point.dbName) return point.dbName;
-  return 'Point de graissage';
-};
-
-const buildEntries = (craneId: string, images: CraneImages): CriticalPointEntry[] => {
-  const isTukan = craneId === 'tukan';
-  const entries: CriticalPointEntry[] = [];
-
-  const addEntry = (point: DiagramPoint, sectionLabel: string, stepId: StepId) => {
-    const dbCandidates = getDbNameCandidates(point);
-    if (!dbCandidates.length) return;
-
-    entries.push({
-      point,
-      label: makeLabel(point),
-      tagLabel: point.tagPrimary || point.dbName || point.tagSecondary || point.name,
-      sectionLabel,
-      stepId,
-      dbCandidates,
-    });
-  };
-
-  ZONE_KEYS.forEach(zoneKey => {
-    const config = getZoneDiagramConfig(zoneKey, images);
-    const points = isTukan ? TUKAN_ZONE_POINTS[zoneKey] : config.points;
-    points.forEach(point => {
-      addEntry(point, `Translation - ${config.title}`, `translation:${zoneKey}` as StepId);
-    });
-  });
-
-  const rotationLeft = isTukan ? TUKAN_ROTATION_DRIVE_GROUPS_LEFT_POINTS : ROTATION_DRIVE_GROUPS_LEFT_POINTS;
-  rotationLeft.forEach(point => addEntry(point, 'Rotation - Groupe gauche', 'rotation:drive-groups'));
-
-  const rotationRight = isTukan ? TUKAN_ROTATION_DRIVE_GROUPS_RIGHT_POINTS : ROTATION_DRIVE_GROUPS_RIGHT_POINTS;
-  rotationRight.forEach(point => addEntry(point, 'Rotation - Groupe droite', 'rotation:drive-groups'));
-
-  const relevage = isTukan ? TUKAN_RELEVAGE_DRIVE_GROUPS_POINTS : RELEVAGE_DRIVE_GROUPS_POINTS;
-  relevage.forEach(point => addEntry(point, 'Relevage - Groupes', 'relevage:drive-groups'));
-
-  const levage = isTukan ? TUKAN_LEVAGE_DRIVE_GROUPS_POINTS : LEVAGE_DRIVE_GROUPS_POINTS;
-  levage.forEach(point => addEntry(point, 'Levage - Groupes', 'levage:drive-groups'));
-
-  getPouliesDriveGroupsPoints(craneId).forEach(point => addEntry(point, 'Poulies - Groupes', 'poulies:drive-groups'));
-
-  const pouliesOverview = craneId === 'tukan' ? getTukanPouliesOverviewPoints() : getPouliesOverviewPoints(craneId);
-  pouliesOverview
-    .filter(point => !point.id.includes('nav'))
-    .forEach(point => addEntry(point, 'Poulies - Systeme', 'poulies'));
-
-  return entries;
-};
+type CriticalEntryWithData = FleetEntry & { data: NonNullable<ReturnType<typeof pickLubricationData>> };
 
 const formatAmount = (value: number | null | undefined) => {
   if (value === null || value === undefined) return '-';
@@ -144,7 +48,7 @@ const CriticalPointsPanel = ({ craneId, images }: CriticalPointsPanelProps) => {
     );
   }, [entries, lubricationDataMap]);
 
-  const handleNavigate = (entry: CriticalPointEntry) => {
+  const handleNavigate = (entry: FleetEntry) => {
     const path = stepToPath(craneId, entry.stepId);
     navigate(path, { state: { focusPointId: entry.point.id, fromCriticalPanel: true } });
   };

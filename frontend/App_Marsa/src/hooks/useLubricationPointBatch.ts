@@ -6,10 +6,15 @@ const POLL_INTERVAL_MS = 5000;
 
 export const useLubricationPointBatch = (names: string[]) => {
   const [lubricationDataMap, setLubricationDataMap] = useState<Map<string, LubricationPointDto>>(new Map());
+  const [hasLoaded, setHasLoaded] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchAll = useCallback(async () => {
-    if (!names.length) return;
+    if (!names.length) {
+      await Promise.resolve();
+      setHasLoaded(true);
+      return;
+    }
 
     const newMap = new Map<string, LubricationPointDto>();
     const results = await Promise.allSettled(
@@ -25,6 +30,7 @@ export const useLubricationPointBatch = (names: string[]) => {
     });
 
     setLubricationDataMap(newMap);
+    setHasLoaded(true);
   }, [names]);
 
   useEffect(() => {
@@ -35,5 +41,5 @@ export const useLubricationPointBatch = (names: string[]) => {
     };
   }, [fetchAll]);
 
-  return { lubricationDataMap };
+  return { lubricationDataMap, hasLoaded };
 };
