@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { cranes, type CraneConfig } from '../../../config/cranesConfig';
 import InteractiveDiagram from '../../diagram/InteractiveDiagram/InteractiveDiagram';
 import type { DiagramPoint } from '../../diagram/types';
@@ -8,7 +8,19 @@ import { CRANE_SYSTEMS, getSystemById } from './craneSystemDiagrams';
 import PointDetailCard, { type ViewStats } from './PointDetailCard';
 import './DashboardDiagramPanel.css';
 
-const DashboardDiagramPanel = () => {
+export interface DiagramSelection {
+  craneId: string;
+  systemId: string;
+  pointId: string;
+  /** Changes on every locate request so repeated clicks re-trigger the effect. */
+  nonce: number;
+}
+
+interface DashboardDiagramPanelProps {
+  selection?: DiagramSelection | null;
+}
+
+const DashboardDiagramPanel = ({ selection }: DashboardDiagramPanelProps) => {
   const availableCranes = useMemo<CraneConfig[]>(
     () => Object.values(cranes).filter(crane => crane.hasData),
     [],
@@ -17,7 +29,9 @@ const DashboardDiagramPanel = () => {
   const [craneId, setCraneId] = useState<string>(availableCranes[0]?.id ?? '');
   const [systemId, setSystemId] = useState<string>(CRANE_SYSTEMS[0].id);
   const [hoveredPoint, setHoveredPoint] = useState<DiagramPoint | null>(null);
+  const [focusPointId, setFocusPointId] = useState<string>('');
   const [dataMap, setDataMap] = useState<Map<string, LubricationPointDto>>(new Map());
+  const sectionRef = useRef<HTMLElement | null>(null);
 
   const crane = useMemo(
     () => availableCranes.find(item => item.id === craneId) ?? availableCranes[0],
@@ -27,9 +41,31 @@ const DashboardDiagramPanel = () => {
   const system = getSystemById(systemId);
   const views = useMemo(() => (crane ? system.getViews(crane) : []), [crane, system]);
 
+  // Once the targeted system is rendered, surface the focused point in the side card.
+  useEffect(() => {
+    if (!focusPointId) return;
+    for (const view of views) {
+      const target = view.points.find(point => point.id === focusPointId);
+      if (target) {
+        setHoveredPoint(target);
+        break;
+      }
+    }
+  }, [focusPointId, views]);
+
   useEffect(() => {
     setHoveredPoint(null);
   }, [systemId, craneId]);
+
+  // Apply an external "locate on schema" request coming from the anomalies panel.
+  useEffect(() => {
+    if (!selection) return;
+    setCraneId(selection.craneId);
+    setSystemId(selection.systemId);
+    setFocusPointId(selection.pointId);
+    sectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selection?.nonce]);
 
   const mergeData = useCallback((incoming: Map<string, LubricationPointDto>) => {
     setDataMap(previous => {
@@ -70,7 +106,7 @@ const DashboardDiagramPanel = () => {
   }
 
   return (
-    <section className="diagram-panel" aria-label="Cartographie interactive">
+    <section className="diagram-panel" aria-label="Cartographie interactive" ref={sectionRef}>
       <header className="diagram-panel__header">
         <p className="diagram-panel__eyebrow">Cartographie interactive</p>
         <h2 className="diagram-panel__title">Points de graissage sur schéma technique</h2>
@@ -84,7 +120,10 @@ const DashboardDiagramPanel = () => {
             role="tab"
             aria-selected={item.id === crane.id}
             className={`diagram-panel__crane-tab${item.id === crane.id ? ' diagram-panel__crane-tab--active' : ''}`}
-            onClick={() => setCraneId(item.id)}
+            onClick={() => {
+              setFocusPointId('');
+              setCraneId(item.id);
+            }}
           >
             {item.name}
           </button>
@@ -99,7 +138,10 @@ const DashboardDiagramPanel = () => {
             role="tab"
             aria-selected={item.id === system.id}
             className={`diagram-panel__system-tab${item.id === system.id ? ' diagram-panel__system-tab--active' : ''}`}
-            onClick={() => setSystemId(item.id)}
+            onClick={() => {
+              setFocusPointId('');
+              setSystemId(item.id);
+            }}
           >
             {item.label}
           </button>
@@ -118,6 +160,7 @@ const DashboardDiagramPanel = () => {
                 points={view.points}
                 size={view.size}
                 showHeader={views.length > 1}
+                initialActivePointId={focusPointId}
                 disablePopup
                 onPointHover={setHoveredPoint}
                 onLubricationData={mergeData}

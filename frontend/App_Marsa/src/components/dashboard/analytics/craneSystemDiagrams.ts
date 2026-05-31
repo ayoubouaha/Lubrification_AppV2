@@ -222,3 +222,20 @@ export const CRANE_SYSTEMS: SystemDef[] = [
 
 export const getSystemById = (id: string): SystemDef =>
   CRANE_SYSTEMS.find(system => system.id === id) ?? CRANE_SYSTEMS[0];
+
+/**
+ * Maps a navigation `StepId` (used by fleet entries / routing) to the
+ * `SystemDef.id` understood by the in-dashboard diagram panel. The two naming
+ * schemes diverge for drive-group views ("drive-groups" vs "groupes").
+ */
+const STEP_ID_TO_SYSTEM_ID: Record<string, string> = {
+  'rotation:drive-groups': 'rotation:groupes',
+  'relevage:drive-groups': 'relevage:groupes',
+  'levage:drive-groups': 'levage:groupes',
+  'poulies:drive-groups': 'poulies:groupes',
+};
+
+export const stepIdToSystemId = (stepId: string): string => {
+  const mapped = STEP_ID_TO_SYSTEM_ID[stepId] ?? stepId;
+  return CRANE_SYSTEMS.some(system => system.id === mapped) ? mapped : CRANE_SYSTEMS[0].id;
+};
