@@ -10,9 +10,9 @@
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at 15% 10%, rgba(33, 94, 156, 0.25), transparent 55%),
-    radial-gradient(circle at 85% 15%, rgba(15, 118, 110, 0.2), transparent 60%),
-    linear-gradient(140deg, rgba(15, 23, 42, 0.12), rgba(15, 23, 42, 0));
+  background: radial-gradient(circle at 15% 10%, rgba(28, 157, 215, 0.18), transparent 55%),
+    radial-gradient(circle at 85% 15%, rgba(22, 48, 107, 0.16), transparent 60%),
+    linear-gradient(140deg, rgba(22, 48, 107, 0.08), rgba(22, 48, 107, 0));
   opacity: 0.8;
   pointer-events: none;
   z-index: 0;
