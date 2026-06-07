@@ -38,6 +38,10 @@ const formatNumber = (value: number, fractionDigits = 0): string =>
     maximumFractionDigits: fractionDigits,
   });
 
+/** Amounts arrive from the backend already in grams; format without extra scaling. */
+const formatGrams = (value: number): string =>
+  value.toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 3 });
+
 const ecartClass = (ecart: number | null): string => {
   if (ecart === null) return 'zone-detail__ecart--none';
   if (ecart < 0) return 'zone-detail__ecart--red';
@@ -113,8 +117,8 @@ const ZoneDetailTables = ({ rows, isLoading }: ZoneDetailTablesProps) => {
                   <tr>
                     <th className="zone-detail__th zone-detail__th--left">Zone</th>
                     <th className="zone-detail__th">Pts</th>
-                    <th className="zone-detail__th">Prévu</th>
-                    <th className="zone-detail__th">Effectué</th>
+                    <th className="zone-detail__th">Prévu (g)</th>
+                    <th className="zone-detail__th">Effectué (g)</th>
                     <th className="zone-detail__th">Écart</th>
                   </tr>
                 </thead>
@@ -123,8 +127,8 @@ const ZoneDetailTables = ({ rows, isLoading }: ZoneDetailTablesProps) => {
                     <tr key={zone.zone}>
                       <td className="zone-detail__td zone-detail__td--left">{zone.zone}</td>
                       <td className="zone-detail__td">{zone.pts}</td>
-                      <td className="zone-detail__td">{formatNumber(zone.planned)}</td>
-                      <td className="zone-detail__td">{formatNumber(zone.actual)}</td>
+                      <td className="zone-detail__td">{formatGrams(zone.planned)}</td>
+                      <td className="zone-detail__td">{formatGrams(zone.actual)}</td>
                       <td className="zone-detail__td zone-detail__td--ecart">
                         <span className={`zone-detail__ecart ${ecartClass(zone.ecart)}`}>
                           {formatEcart(zone.ecart)}

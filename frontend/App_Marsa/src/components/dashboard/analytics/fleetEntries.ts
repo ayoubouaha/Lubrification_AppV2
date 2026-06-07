@@ -22,7 +22,7 @@ import { TUKAN_TRANSLATION_ZONE_A_MARKERS } from '../../diagram/translation/tuka
 import { TUKAN_TRANSLATION_ZONE_B_MARKERS } from '../../diagram/translation/tukanTranslationZoneBMarkers';
 import { TUKAN_TRANSLATION_ZONE_C_MARKERS } from '../../diagram/translation/tukanTranslationZoneCMarkers';
 import { TUKAN_TRANSLATION_ZONE_D_MARKERS } from '../../diagram/translation/tukanTranslationZoneDMarkers';
-import { getDbNameCandidates } from '../../diagram/diagramPointUtils';
+import { getDbNameCandidates, expandSinglePointMarkers } from '../../diagram/diagramPointUtils';
 import type { StepId } from '../../../navigation/steps';
 
 export type FleetEntry = {
@@ -79,28 +79,27 @@ export const buildEntries = (craneId: string, images: CraneImages): FleetEntry[]
   ZONE_KEYS.forEach(zoneKey => {
     const config = getZoneDiagramConfig(zoneKey, images);
     const points = isTukan ? TUKAN_ZONE_POINTS[zoneKey] : config.points;
-    points.forEach(point => {
+    expandSinglePointMarkers(points).forEach(point => {
       addEntry(point, `Translation - ${config.title}`, TRANSLATION_ZONE_LABELS[zoneKey], `translation:${zoneKey}` as StepId);
     });
   });
 
   const rotationLeft = isTukan ? TUKAN_ROTATION_DRIVE_GROUPS_LEFT_POINTS : ROTATION_DRIVE_GROUPS_LEFT_POINTS;
-  rotationLeft.forEach(point => addEntry(point, 'Rotation - Groupe gauche', 'Rotation', 'rotation:drive-groups'));
+  expandSinglePointMarkers(rotationLeft).forEach(point => addEntry(point, 'Rotation - Groupe gauche', 'Rotation', 'rotation:drive-groups'));
 
   const rotationRight = isTukan ? TUKAN_ROTATION_DRIVE_GROUPS_RIGHT_POINTS : ROTATION_DRIVE_GROUPS_RIGHT_POINTS;
-  rotationRight.forEach(point => addEntry(point, 'Rotation - Groupe droite', 'Rotation', 'rotation:drive-groups'));
+  expandSinglePointMarkers(rotationRight).forEach(point => addEntry(point, 'Rotation - Groupe droite', 'Rotation', 'rotation:drive-groups'));
 
   const relevage = isTukan ? TUKAN_RELEVAGE_DRIVE_GROUPS_POINTS : RELEVAGE_DRIVE_GROUPS_POINTS;
-  relevage.forEach(point => addEntry(point, 'Relevage - Groupes', 'Relevage', 'relevage:drive-groups'));
+  expandSinglePointMarkers(relevage).forEach(point => addEntry(point, 'Relevage - Groupes', 'Relevage', 'relevage:drive-groups'));
 
   const levage = isTukan ? TUKAN_LEVAGE_DRIVE_GROUPS_POINTS : LEVAGE_DRIVE_GROUPS_POINTS;
-  levage.forEach(point => addEntry(point, 'Levage - Groupes', 'Levage', 'levage:drive-groups'));
+  expandSinglePointMarkers(levage).forEach(point => addEntry(point, 'Levage - Groupes', 'Levage', 'levage:drive-groups'));
 
-  getPouliesDriveGroupsPoints(craneId).forEach(point => addEntry(point, 'Poulies - Groupes', 'Poulies', 'poulies:drive-groups'));
+  expandSinglePointMarkers(getPouliesDriveGroupsPoints(craneId)).forEach(point => addEntry(point, 'Poulies - Groupes', 'Poulies', 'poulies:drive-groups'));
 
   const pouliesOverview = craneId === 'tukan' ? getTukanPouliesOverviewPoints() : getPouliesOverviewPoints(craneId);
-  pouliesOverview
-    .filter(point => !point.id.includes('nav'))
+  expandSinglePointMarkers(pouliesOverview.filter(point => !point.id.includes('nav')))
     .forEach(point => addEntry(point, 'Poulies - Systeme', 'Poulies', 'poulies'));
 
   return entries;

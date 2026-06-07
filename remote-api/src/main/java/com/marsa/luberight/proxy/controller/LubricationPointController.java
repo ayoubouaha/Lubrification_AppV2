@@ -2,7 +2,7 @@ package com.marsa.luberight.proxy.controller;
 
 import com.marsa.luberight.proxy.domain.LubricationPointResponse;
 import com.marsa.luberight.proxy.service.LubricationPointService;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -19,19 +19,11 @@ public class LubricationPointController {
     this.service = service;
   }
 
-  @GetMapping("/api/data")
-  public ResponseEntity<List<LubricationPointResponse>> findData(
-      @RequestParam(value = "updatedAfter", required = false)
-          @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-          LocalDateTime updatedAfter) {
-    return ResponseEntity.ok(service.fetch(updatedAfter));
-  }
-
   @GetMapping("/api/calender/history")
   public ResponseEntity<List<LubricationPointResponse>> findCalenderHistory(
       @RequestParam(value = "updatedAfter", required = false)
-          @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-          LocalDateTime updatedAfter) {
+          @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+          LocalDate updatedAfter) {
     return ResponseEntity.ok(service.fetchCalenderHistory(updatedAfter));
   }
 }

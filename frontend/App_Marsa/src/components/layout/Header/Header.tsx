@@ -1,8 +1,7 @@
 import './Header.css';
 import logo from '../../../assets/MarsaLogo.png';
 import { useTheme } from '../../../theme/ThemeProvider';
-import { useNavigate, useParams } from 'react-router-dom';
-import { DEFAULT_CRANE_ID } from '../../../config/cranesConfig';
+import { useNavigate } from 'react-router-dom';
 
 interface HeaderProps {
   isSidebarOpen: boolean;
@@ -12,8 +11,6 @@ interface HeaderProps {
 const Header = ({ isSidebarOpen, onToggleSidebar }: HeaderProps) => {
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
-  const { craneId } = useParams();
-  const activeCraneId = craneId ?? DEFAULT_CRANE_ID;
 
   return (
     <header className="header">
@@ -35,7 +32,7 @@ const Header = ({ isSidebarOpen, onToggleSidebar }: HeaderProps) => {
           aria-label="App Marsa home"
           onClick={event => {
             event.preventDefault();
-            navigate(`/crane/${activeCraneId}/dashboard`);
+            navigate('/dashboard');
           }}
         >
           <img src={logo} alt="App Marsa logo" className="header__logo-image" />

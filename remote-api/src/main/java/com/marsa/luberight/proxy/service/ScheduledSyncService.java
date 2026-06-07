@@ -4,7 +4,7 @@ import com.marsa.luberight.proxy.domain.BackendSyncState;
 import com.marsa.luberight.proxy.domain.LubricationPointResponse;
 import com.marsa.luberight.proxy.domain.SyncBatchRequest;
 import com.marsa.luberight.proxy.domain.SyncIngestResponse;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
@@ -60,26 +60,24 @@ public class ScheduledSyncService {
     try {
       BackendSyncState state = backendSyncClient.getState();
       markBackendAvailable();
-      LocalDateTime updatedAfter =
-          state != null && !state.initialHistorySyncRequired() ? state.lastSyncTimestamp() : null;
+      LocalDate updatedAfter =
+          state != null && !state.initialHistorySyncRequired() ? state.lastSyncDate() : null;
 
-      List<LubricationPointResponse> latestSnapshots = lubricationPointService.fetch(updatedAfter);
       List<LubricationPointResponse> calenderHistory =
           lubricationPointService.fetchCalenderHistory(updatedAfter);
 
-      if (latestSnapshots.isEmpty() && calenderHistory.isEmpty()) {
+      if (calenderHistory.isEmpty()) {
         log.info("{} synchronization found no new data", trigger);
         return;
       }
 
       SyncIngestResponse response =
-          backendSyncClient.sendBatch(new SyncBatchRequest(latestSnapshots, calenderHistory));
+          backendSyncClient.sendBatch(new SyncBatchRequest(calenderHistory));
       log.info(
-          "{} synchronization sent {} latest snapshots and {} Calender rows; backend lastSync={}",
+          "{} synchronization sent {} Calender rows; backend lastSync={}",
           trigger,
-          response.latestSnapshotCount(),
           response.calenderHistoryCount(),
-          response.lastSyncTimestamp());
+          response.lastSyncDate());
     } catch (BackendUnavailableException ex) {
       markBackendUnavailable();
     } catch (Exception ex) {

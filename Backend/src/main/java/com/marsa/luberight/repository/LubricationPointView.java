@@ -1,7 +1,7 @@
 package com.marsa.luberight.repository;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 public interface LubricationPointView {
   String getName();
@@ -12,5 +12,7 @@ public interface LubricationPointView {
 
   BigDecimal getActualAmount();
 
-  LocalDateTime getTimestamp();
+  LocalDate getActualDate();
+
+  String getLubricator();
 }

@@ -38,3 +38,28 @@
   letter-spacing: -0.01em;
   color: var(--text-primary);
 }
+
+.fleet-overview__controls {
+  display: flex;
+  align-items: flex-end;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+/* Push the sync indicator to the far right of the selector row (right of the graisseur). */
+.fleet-overview__controls .sync-badge {
+  margin-left: auto;
+}
+
+.fleet-overview__charts-row {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 1080px) {
+  .fleet-overview__charts-row {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    align-items: stretch;
+  }
+}

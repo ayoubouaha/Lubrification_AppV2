@@ -1,6 +1,6 @@
 import { type DiagramPoint } from '../types';
 import { type CraneImages } from '../../../config/cranesConfig';
-import { BASE_MARKERS } from './markerCatalog';
+import { BASE_MARKERS, type MarkerId } from './markerCatalog';
 import { PROFILE_COORDINATES, PROFILE_DISABLED_MARKERS, type ZoneProfile } from './coordinateProfiles';
 import { PROFILE_MARKER_OVERRIDES } from './profileMarkerOverrides';
 
@@ -12,6 +12,10 @@ interface ZoneDefinitionBase {
   imageAlt: string;
   profile: ZoneProfile;
   tagLetter: 'A' | 'B' | 'C' | 'D';
+  /** Shared markers to hide for THIS zone only (the others keep them). */
+  hiddenMarkers?: readonly MarkerId[];
+  /** Extra points that exist only in THIS zone (not part of the shared catalog). */
+  extraPoints?: readonly DiagramPoint[];
 }
 
 const BASE_ZONE_REGISTRY: Record<ZoneKey, ZoneDefinitionBase> = {
@@ -21,6 +25,9 @@ const BASE_ZONE_REGISTRY: Record<ZoneKey, ZoneDefinitionBase> = {
     imageAlt: 'Schema technique de la grue Coté Mer Nord A',
     profile: 'profile-ac',
     tagLetter: 'A',
+    // K3-STR-A21 / A22 do not exist on this side: hide the biellette marker for zone A only
+    // (zone C keeps the same marker as C21 / C22).
+    hiddenMarkers: ['left-bogie-lower-link'],
   },
   'sud-c': {
     title: 'Côté Terre / Sud - C',
@@ -42,6 +49,22 @@ const BASE_ZONE_REGISTRY: Record<ZoneKey, ZoneDefinitionBase> = {
     imageAlt: 'Schema technique de la grue Coté Mer Sud B',
     profile: 'profile-db',
     tagLetter: 'B',
+    // K3-STR-B19 / B20 exist only on side B. Placed near the spot marked in purple on the
+    // schema; adjust xPercent / yPercent to fine-tune the marker position.
+    extraPoints: [
+      {
+        id: 'sud-b-biellette-extra',
+        name: 'K3-STR-B19 / K3-STR-B20',
+        shortDescription: 'Biellette inferieure supplementaire',
+        details: 'Point de graissage supplementaire cote B.',
+        tagPrimary: 'K3-STR-B19',
+        tagSecondary: 'K3-STR-B20',
+        frequency: '07j',
+        plannedAmount: '125g',
+        xPercent: 35,
+        yPercent: 55,
+      },
+    ],
   },
 };
 
@@ -59,12 +82,18 @@ const normalizeTagForLetter = (tag: string, letter: ZoneDefinitionBase['tagLette
   return tag.replace(/^K3-STR-[A-Z]/, `K3-STR-${letter}`);
 };
 
-const buildPointsForProfile = (profile: ZoneProfile, tagLetter: ZoneDefinitionBase['tagLetter']): DiagramPoint[] => {
+const buildPointsForProfile = (
+  profile: ZoneProfile,
+  tagLetter: ZoneDefinitionBase['tagLetter'],
+  hiddenMarkers: ReadonlySet<MarkerId>,
+): DiagramPoint[] => {
   const coordinateMap = PROFILE_COORDINATES[profile];
   const disabledMarkers = new Set(PROFILE_DISABLED_MARKERS[profile]);
   const markerOverrides = PROFILE_MARKER_OVERRIDES[profile];
 
-  return BASE_MARKERS.filter(marker => !disabledMarkers.has(marker.id)).map(marker => {
+  return BASE_MARKERS.filter(
+    marker => !disabledMarkers.has(marker.id) && !hiddenMarkers.has(marker.id),
+  ).map(marker => {
     const override = markerOverrides[marker.id];
     const mergedPoint: DiagramPoint = {
       ...marker,
@@ -108,11 +137,20 @@ export const getZoneDiagramConfig = (zoneKey: ZoneKey, images: CraneImages) => {
     'sud-b': images.sudB,
   };
 
+  const points = [
+    ...buildPointsForProfile(
+      zoneDefinition.profile,
+      zoneDefinition.tagLetter,
+      new Set(zoneDefinition.hiddenMarkers ?? []),
+    ),
+    ...(zoneDefinition.extraPoints ?? []),
+  ];
+
   return {
     title: zoneDefinition.title,
     subtitle: zoneDefinition.subtitle,
     imageSrc: imageMap[zoneKey],
     imageAlt: zoneDefinition.imageAlt,
-    points: buildPointsForProfile(zoneDefinition.profile, zoneDefinition.tagLetter),
+    points,
   };
 };

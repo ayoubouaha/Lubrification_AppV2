@@ -4,8 +4,11 @@ import type { LubricationPointDto } from '../../../types/lubricationPoint';
 import {
   getDbNameCandidates,
   resolveLubricationStatus,
+  resolveLubricationGrade,
   computeLubricationPercentValue,
+  GRADE_LABEL,
 } from '../../diagram/diagramPointUtils';
+import type { PointHistoryEntry } from '../../../hooks/usePointHistory';
 import './PointDetailCard.css';
 
 export interface ViewStats {
@@ -20,12 +23,58 @@ interface PointDetailCardProps {
   dataMap: Map<string, LubricationPointDto>;
   subtitle: string;
   stats: ViewStats;
+  history?: Map<string, PointHistoryEntry[]>;
 }
 
-const STATUS_LABEL: Record<'green' | 'orange' | 'red', string> = {
-  green: 'Conforme',
-  orange: 'Sous-dosé',
-  red: 'Critique',
+const SPARK_W = 248;
+const SPARK_H = 60;
+const SPARK_PAD = 6;
+
+/** Small line of effectué (solid green) vs prévu (faint dashed) over the recent execution dates. */
+const HistorySparkline = ({ entries }: { entries: PointHistoryEntry[] }) => {
+  const greasedCount = entries.filter(e => e.actual !== null && e.actual > 0).length;
+  if (greasedCount < 2) return null;
+
+  const max = Math.max(1, ...entries.flatMap(e => [e.actual ?? 0, e.planned ?? 0]));
+  const n = entries.length;
+  const x = (i: number) => SPARK_PAD + (n <= 1 ? 0 : (i / (n - 1)) * (SPARK_W - 2 * SPARK_PAD));
+  const y = (v: number) => SPARK_PAD + (1 - v / max) * (SPARK_H - 2 * SPARK_PAD);
+
+  let plannedPath = '';
+  let plannedConnected = false;
+  let actualPath = '';
+  let actualConnected = false;
+  entries.forEach((e, i) => {
+    if (e.planned != null) {
+      plannedPath += `${plannedConnected ? 'L' : 'M'}${x(i).toFixed(1)},${y(e.planned).toFixed(1)} `;
+      plannedConnected = true;
+    } else {
+      plannedConnected = false;
+    }
+    if (e.actual != null && e.actual > 0) {
+      actualPath += `${actualConnected ? 'L' : 'M'}${x(i).toFixed(1)},${y(e.actual).toFixed(1)} `;
+      actualConnected = true;
+    } else {
+      actualConnected = false;
+    }
+  });
+
+  return (
+    <div className="point-detail__history">
+      <span className="point-detail__history-label">Historique · effectué vs prévu</span>
+      <svg viewBox={`0 0 ${SPARK_W} ${SPARK_H}`} className="point-detail__spark" role="img">
+        <path d={plannedPath.trim()} className="point-detail__spark-planned" />
+        <path d={actualPath.trim()} className="point-detail__spark-actual" />
+        {entries.map((e, i) =>
+          e.actual !== null && e.actual > 0 ? (
+            <circle key={e.date} cx={x(i)} cy={y(e.actual)} r={2} className="point-detail__spark-dot">
+              <title>{`${e.label} : ${Math.round(e.actual)} g`}</title>
+            </circle>
+          ) : null,
+        )}
+      </svg>
+    </div>
+  );
 };
 
 const fmt = (value: number | null | undefined, digits = 0): string =>
@@ -33,8 +82,23 @@ const fmt = (value: number | null | undefined, digits = 0): string =>
     ? '—'
     : value.toLocaleString('fr-FR', { minimumFractionDigits: digits, maximumFractionDigits: digits });
 
-const PointDetailCard = ({ point, dataMap, subtitle, stats }: PointDetailCardProps) => {
+/** Amounts arrive from the backend already in grams; format without extra scaling. */
+const fmtGrams = (value: number | null | undefined): string =>
+  value === null || value === undefined
+    ? '—'
+    : value.toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 3 });
+
+const PointDetailCard = ({ point, dataMap, subtitle, stats, history }: PointDetailCardProps) => {
   const candidates = useMemo(() => (point ? getDbNameCandidates(point) : []), [point]);
+
+  const historyEntries = useMemo<PointHistoryEntry[]>(() => {
+    if (!history) return [];
+    for (const name of candidates) {
+      const entries = history.get(name);
+      if (entries && entries.length) return entries;
+    }
+    return [];
+  }, [history, candidates]);
 
   const matched = useMemo<LubricationPointDto[]>(() => {
     const seen = new Set<string>();
@@ -60,7 +124,9 @@ const PointDetailCard = ({ point, dataMap, subtitle, stats }: PointDetailCardPro
     ? matched.reduce((sum, item) => sum + (item.actualAmount ?? 0), 0)
     : null;
   const interval = matched.find(item => item.interval !== null)?.interval ?? null;
+  const lubricator = matched.find(item => item.lubricator)?.lubricator ?? null;
   const status = resolveLubricationStatus(actual, planned);
+  const grade = resolveLubricationGrade(actual, planned);
   const percent = computeLubricationPercentValue(actual, planned);
   const ecart =
     actual !== null && planned !== null && planned > 0 ? ((actual - planned) / planned) * 100 : null;
@@ -77,15 +143,18 @@ const PointDetailCard = ({ point, dataMap, subtitle, stats }: PointDetailCardPro
           <p className="point-detail__eyebrow">Point graissage</p>
           <h3 className="point-detail__name">{displayName}</h3>
           <p className="point-detail__subtitle">{subtitle}</p>
+          {lubricator ? (
+            <p className="point-detail__subtitle">Graisseur · {lubricator}</p>
+          ) : null}
 
           <div className="point-detail__grid">
             <div className="point-detail__metric">
               <span className="point-detail__metric-label">Prévu</span>
-              <span className="point-detail__metric-value">{fmt(planned)} g</span>
+              <span className="point-detail__metric-value">{fmtGrams(planned)} g</span>
             </div>
             <div className="point-detail__metric">
               <span className="point-detail__metric-label">Effectué</span>
-              <span className="point-detail__metric-value">{fmt(actual)} g</span>
+              <span className="point-detail__metric-value">{fmtGrams(actual)} g</span>
             </div>
             <div className="point-detail__metric">
               <span className="point-detail__metric-label">Écart</span>
@@ -110,8 +179,10 @@ const PointDetailCard = ({ point, dataMap, subtitle, stats }: PointDetailCardPro
 
           <div className={`point-detail__badge point-detail__badge--${status}`}>
             <span className="point-detail__badge-dot" />
-            {STATUS_LABEL[status]}
+            {GRADE_LABEL[grade]}
           </div>
+
+          {historyEntries.length ? <HistorySparkline entries={historyEntries} /> : null}
         </div>
       )}
 

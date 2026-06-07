@@ -4,7 +4,7 @@ import com.marsa.luberight.proxy.domain.LubricationPointResponse;
 import com.marsa.luberight.proxy.repository.LubricationPointRepository;
 import com.marsa.luberight.proxy.repository.LubricationPointView;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 import org.springframework.stereotype.Service;
 
@@ -17,13 +17,7 @@ public class LubricationPointService {
     this.repository = repository;
   }
 
-  public List<LubricationPointResponse> fetch(LocalDateTime updatedAfter) {
-    return repository.findLatest(updatedAfter).stream()
-        .map(this::mapToResponse)
-        .toList();
-  }
-
-  public List<LubricationPointResponse> fetchCalenderHistory(LocalDateTime updatedAfter) {
+  public List<LubricationPointResponse> fetchCalenderHistory(LocalDate updatedAfter) {
     return repository.findCalenderHistory(updatedAfter).stream()
         .map(this::mapToResponse)
         .toList();
@@ -32,12 +26,13 @@ public class LubricationPointService {
   private LubricationPointResponse mapToResponse(LubricationPointView view) {
     return new LubricationPointResponse(
         view.getName(),
+        view.getSourceIndex(),
         view.getInterval(),
         view.getActualInterval(),
         view.getLubricator(),
         toDouble(view.getPlannedAmount()),
         toDouble(view.getActualAmount()),
-        view.getTimestamp());
+        view.getActualDate());
   }
 
   private Double toDouble(BigDecimal value) {

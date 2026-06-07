@@ -73,6 +73,10 @@ const AnomaliesPanel = ({ rows, isLoading, onLocate }: AnomaliesPanelProps) => {
               const isMissing = row.actual === null || row.actual === undefined;
               const statusLabel = isMissing ? 'NON RELEVÉ' : 'SOUS-DOSÉ';
               const ecartText = ecart === null ? '' : `${ecart > 0 ? '+' : ''}${Math.round(ecart)}%`;
+              const displayNames =
+                row.pointNames && row.pointNames.length > 0
+                  ? row.pointNames.join(' / ')
+                  : row.pointName;
 
               return (
                 <button
@@ -80,10 +84,10 @@ const AnomaliesPanel = ({ rows, isLoading, onLocate }: AnomaliesPanelProps) => {
                   type="button"
                   className={`anomalies__card anomalies__card--${row.status}`}
                   onClick={() => onLocate(row)}
-                  aria-label={`Localiser ${row.pointName} sur le schéma`}
+                  aria-label={`Localiser ${displayNames} sur le schéma`}
                 >
                   <div className="anomalies__card-main">
-                    <span className="anomalies__name">{row.pointName}</span>
+                    <span className="anomalies__name">{displayNames}</span>
                     <span className="anomalies__meta">
                       {row.craneName} · {row.zone}
                     </span>

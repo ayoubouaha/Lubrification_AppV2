@@ -2,6 +2,4 @@ package com.marsa.luberight.proxy.domain;
 
 import java.util.List;
 
-public record SyncBatchRequest(
-    List<LubricationPointResponse> latestSnapshots,
-    List<LubricationPointResponse> calenderHistory) {}
+public record SyncBatchRequest(List<LubricationPointResponse> calenderHistory) {}

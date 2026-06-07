@@ -2,7 +2,7 @@ import DiagramTooltip from "../DiagramTooltip/DiagramTooltip";
 import { type DiagramPoint } from "../types";
 import { type LubricationPointDto } from "../../../types/lubricationPoint";
 import { useMemo, type CSSProperties } from "react";
-import { getDbNameCandidates, pickLubricationData } from "../diagramPointUtils";
+import { getDbNameCandidates, pickLubricationData, resolveLubricationGrade, GRADE_RGB } from "../diagramPointUtils";
 import "./DiagramMarker.css";
 
 interface DiagramMarkerProps {
@@ -12,35 +12,6 @@ interface DiagramMarkerProps {
   onHover?: (point: DiagramPoint | null) => void;
   lubricationDataMap?: Map<string, LubricationPointDto>;
 }
-
-const resolveMarkerColor = (actualAmount: number | null, plannedAmount: number | null): string => {
-  const green = "34, 197, 94";
-  const orange = "245, 158, 11";
-  const red = "239, 68, 68";
-
-  if (actualAmount === null || actualAmount === undefined) {
-    return red;
-  }
-
-  if (plannedAmount === null || plannedAmount <= 0) {
-    return green;
-  }
-
-  if (actualAmount >= plannedAmount) {
-    return green;
-  }
-
-  const gapPercent = ((plannedAmount - actualAmount) / plannedAmount) * 100;
-  if (gapPercent > 50) {
-    return red;
-  }
-
-  if (gapPercent > 10) {
-    return orange;
-  }
-
-  return green;
-};
 
 const DiagramMarker = ({ point, isActive, onClick, onHover, lubricationDataMap }: DiagramMarkerProps) => {
   const defaultColor = point.markerColor ?? "34, 197, 94";
@@ -56,7 +27,7 @@ const DiagramMarker = ({ point, isActive, onClick, onHover, lubricationDataMap }
       return defaultColor;
     }
 
-    return resolveMarkerColor(data?.actualAmount ?? null, data?.plannedAmount ?? null);
+    return GRADE_RGB[resolveLubricationGrade(data?.actualAmount ?? null, data?.plannedAmount ?? null)];
   }, [data, dbNameCandidates, defaultColor]);
 
   const shouldShowLabel = Boolean(point.markerLabel) && (Boolean(point.alwaysShowLabel) || isActive);

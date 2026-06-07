@@ -1,5 +1,5 @@
 package com.marsa.luberight.proxy.domain;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
-public record BackendSyncState(LocalDateTime lastSyncTimestamp, boolean initialHistorySyncRequired) {}
+public record BackendSyncState(LocalDate lastSyncDate, boolean initialHistorySyncRequired) {}

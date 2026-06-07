@@ -1,7 +1,7 @@
 package com.marsa.luberight.proxy.repository;
 
 import com.marsa.luberight.proxy.domain.Admin;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -14,59 +14,20 @@ public interface LubricationPointRepository extends JpaRepository<Admin, Integer
           """
           SELECT
             adm.Name AS name,
-            latestCal.ActualInterval AS [interval],
-            latestCal.ActualInterval AS actualInterval,
-            latestCal.Lubricator AS lubricator,
-            COALESCE(latestCal.PlannedAmount, latestPlanned.PlannedAmount) AS plannedAmount,
-            latestCal.ActualAmount AS actualAmount,
-            latestCal.[TimeStamp] AS [timestamp]
-          FROM dbo.Admin adm
-          OUTER APPLY (
-            SELECT TOP (1)
-              cal.ActualInterval,
-              cal.Lubricator,
-              cal.PlannedAmount,
-              cal.ActualAmount,
-              cal.[TimeStamp],
-              cal.[Index]
-            FROM dbo.Calender cal
-            WHERE cal.AdminIndex = adm.[Index]
-            ORDER BY
-              CASE WHEN cal.ActualAmount IS NULL THEN 1 ELSE 0 END,
-              cal.[TimeStamp] DESC,
-              cal.[Index] DESC
-          ) AS latestCal
-          OUTER APPLY (
-            SELECT TOP (1)
-              cal.PlannedAmount
-            FROM dbo.Calender cal
-            WHERE cal.AdminIndex = adm.[Index]
-              AND cal.PlannedAmount IS NOT NULL
-            ORDER BY cal.[TimeStamp] DESC, cal.[Index] DESC
-          ) AS latestPlanned
-          WHERE adm.Active = 1
-            AND (:updatedAfter IS NULL OR latestCal.[TimeStamp] > :updatedAfter)
-          """,
-      nativeQuery = true)
-  List<LubricationPointView> findLatest(@Param("updatedAfter") LocalDateTime updatedAfter);
-
-  @Query(
-      value =
-          """
-          SELECT
-            adm.Name AS name,
+            cal.[Index] AS sourceIndex,
             cal.ActualInterval AS [interval],
             cal.ActualInterval AS actualInterval,
             cal.Lubricator AS lubricator,
             cal.PlannedAmount AS plannedAmount,
             cal.ActualAmount AS actualAmount,
-            cal.[TimeStamp] AS [timestamp]
+            cal.ActualDate AS actualDate
           FROM dbo.Calender cal
           INNER JOIN dbo.Admin adm ON adm.[Index] = cal.AdminIndex
-          WHERE (:updatedAfter IS NULL OR cal.[TimeStamp] > :updatedAfter)
-          ORDER BY cal.[TimeStamp] ASC, cal.[Index] ASC
+          WHERE cal.ActualDate IS NOT NULL
+            AND (:updatedAfter IS NULL OR cal.ActualDate > :updatedAfter)
+          ORDER BY cal.ActualDate ASC, cal.[Index] ASC
           """,
       nativeQuery = true)
   List<LubricationPointView> findCalenderHistory(
-      @Param("updatedAfter") LocalDateTime updatedAfter);
+      @Param("updatedAfter") LocalDate updatedAfter);
 }

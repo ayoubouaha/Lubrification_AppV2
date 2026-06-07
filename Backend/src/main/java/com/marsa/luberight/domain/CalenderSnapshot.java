@@ -1,16 +1,25 @@
 package com.marsa.luberight.domain;
 
 import jakarta.persistence.Column;
-import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 @Entity
 @Table(name = "calender_snapshot")
 public class CalenderSnapshot {
 
-  @EmbeddedId private CalenderSnapshotId id;
+  @Id
+  @Column(name = "source_index", nullable = false)
+  private Integer sourceIndex;
+
+  @Column(name = "name", nullable = false)
+  private String name;
+
+  @Column(name = "actual_date")
+  private LocalDate actualDate;
 
   @Column(name = "actual_interval")
   private Integer actualInterval;
@@ -27,28 +36,32 @@ public class CalenderSnapshot {
   protected CalenderSnapshot() {}
 
   public CalenderSnapshot(
-      CalenderSnapshotId id,
-      Integer actualInterval,
-      BigDecimal plannedAmount,
-      BigDecimal actualAmount) {
-    this(id, actualInterval, null, plannedAmount, actualAmount);
-  }
-
-  public CalenderSnapshot(
-      CalenderSnapshotId id,
+      Integer sourceIndex,
+      String name,
+      LocalDate actualDate,
       Integer actualInterval,
       String lubricator,
       BigDecimal plannedAmount,
       BigDecimal actualAmount) {
-    this.id = id;
+    this.sourceIndex = sourceIndex;
+    this.name = name;
+    this.actualDate = actualDate;
     this.actualInterval = actualInterval;
     this.lubricator = lubricator;
     this.plannedAmount = plannedAmount;
     this.actualAmount = actualAmount;
   }
 
-  public CalenderSnapshotId getId() {
-    return id;
+  public Integer getSourceIndex() {
+    return sourceIndex;
+  }
+
+  public String getName() {
+    return name;
+  }
+
+  public LocalDate getActualDate() {
+    return actualDate;
   }
 
   public Integer getActualInterval() {
@@ -65,6 +78,14 @@ public class CalenderSnapshot {
 
   public BigDecimal getPlannedAmount() {
     return plannedAmount;
+  }
+
+  public void setName(String name) {
+    this.name = name;
+  }
+
+  public void setActualDate(LocalDate actualDate) {
+    this.actualDate = actualDate;
   }
 
   public void setActualInterval(Integer actualInterval) {

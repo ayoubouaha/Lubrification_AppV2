@@ -1,10 +1,11 @@
 package com.marsa.luberight.dto;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 public record LubricationPointResponse(
     String name,
     Integer interval,
     Double plannedAmount,
     Double actualAmount,
-    LocalDateTime timestamp) {}
+    LocalDate actualDate,
+    String lubricator) {}

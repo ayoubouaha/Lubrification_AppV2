@@ -18,20 +18,21 @@ const formatInterval = (interval: number | null): string => {
   return `${interval} jours`;
 };
 
-const formatScaledAmount = (value: number | null): string => {
+// The backend already returns amounts in grams (it divides the raw x1000 source
+// value by 1000). So we only format here and append the unit — no extra scaling.
+const formatGrams = (value: number | null): string => {
   if (value === null || value === undefined) {
     return '';
   }
 
-  const scaled = value / 1000;
-  const formatted = Number.isInteger(scaled)
-    ? `${scaled}`
-    : scaled
+  const formatted = Number.isInteger(value)
+    ? `${value}`
+    : value
         .toFixed(3)
         .replace(/(\.\d*?)0+$/, '$1')
         .replace(/\.$/, '');
 
-  return formatted;
+  return `${formatted} g`;
 };
 
 const formatPercentage = (value: number): string => {
@@ -78,8 +79,8 @@ const LubricationInfoCard = ({
   onRetry,
 }: LubricationInfoCardProps) => {
   const liveFrequency = formatInterval(liveData?.interval ?? null);
-  const livePlannedAmount = formatScaledAmount(liveData?.plannedAmount ?? null);
-  const liveActualAmount = formatScaledAmount(liveData?.actualAmount ?? null);
+  const livePlannedAmount = formatGrams(liveData?.plannedAmount ?? null);
+  const liveActualAmount = formatGrams(liveData?.actualAmount ?? null);
   const displayFrequency = liveFrequency || frequency;
   const displayPlannedAmount = livePlannedAmount;
   const isLoading = status === 'loading';

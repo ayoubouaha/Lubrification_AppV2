@@ -1,5 +1,7 @@
 package com.marsa.luberight.dto;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.LocalDate;
 
-public record SyncStateResponse(LocalDateTime lastSyncTimestamp, boolean initialHistorySyncRequired) {}
+public record SyncStateResponse(
+    LocalDate lastSyncDate, Instant lastSyncedAt, boolean initialHistorySyncRequired) {}

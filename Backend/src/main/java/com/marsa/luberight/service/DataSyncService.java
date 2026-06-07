@@ -1,21 +1,19 @@
 package com.marsa.luberight.service;
 
-import com.marsa.luberight.domain.LubricationPointSnapshot;
-import com.marsa.luberight.domain.SyncMetadata;
 import com.marsa.luberight.domain.CalenderSnapshot;
-import com.marsa.luberight.domain.CalenderSnapshotId;
+import com.marsa.luberight.domain.SyncMetadata;
 import com.marsa.luberight.dto.RemoteLubricationPointPayload;
 import com.marsa.luberight.dto.SyncBatchRequest;
 import com.marsa.luberight.dto.SyncIngestResponse;
 import com.marsa.luberight.dto.SyncStateResponse;
 import com.marsa.luberight.repository.CalenderSnapshotRepository;
-import com.marsa.luberight.repository.LubricationPointRepository;
 import com.marsa.luberight.repository.SyncMetadataRepository;
 import jakarta.annotation.PostConstruct;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.Comparator;
+import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -29,15 +27,12 @@ public class DataSyncService {
   private static final Logger log = LoggerFactory.getLogger(DataSyncService.class);
   private static final String SYNC_ID = "lubrication-sync";
 
-  private final LubricationPointRepository snapshotRepository;
   private final SyncMetadataRepository metadataRepository;
   private final CalenderSnapshotRepository calenderSnapshotRepository;
 
   public DataSyncService(
-      LubricationPointRepository snapshotRepository,
       SyncMetadataRepository metadataRepository,
       CalenderSnapshotRepository calenderSnapshotRepository) {
-    this.snapshotRepository = snapshotRepository;
     this.metadataRepository = metadataRepository;
     this.calenderSnapshotRepository = calenderSnapshotRepository;
   }
@@ -52,10 +47,10 @@ public class DataSyncService {
   public SyncStateResponse getSyncState() {
     SyncMetadata metadata =
         metadataRepository.findById(SYNC_ID).orElseGet(() -> new SyncMetadata(SYNC_ID));
-    LocalDateTime lastSync = metadata.getLastSyncTimestamp();
+    LocalDate lastSync = metadata.getLastSyncDate();
     boolean needsInitialHistorySync = lastSync == null || calenderSnapshotRepository.count() == 0;
 
-    return new SyncStateResponse(lastSync, needsInitialHistorySync);
+    return new SyncStateResponse(lastSync, metadata.getLastSyncedAt(), needsInitialHistorySync);
   }
 
   @Transactional
@@ -64,36 +59,34 @@ public class DataSyncService {
         metadataRepository
             .findById(SYNC_ID)
             .orElseGet(() -> metadataRepository.save(new SyncMetadata(SYNC_ID)));
-    List<RemoteLubricationPointPayload> latestPayload =
-        request == null ? Collections.emptyList() : nullSafe(request.latestSnapshots());
     List<RemoteLubricationPointPayload> calenderPayload =
         request == null ? Collections.emptyList() : nullSafe(request.calenderHistory());
 
-    latestPayload.forEach(this::upsertSnapshot);
     calenderPayload.forEach(this::upsertCalender);
-    updateLastSync(metadata, latestPayload, calenderPayload);
+    updateLastSync(metadata, calenderPayload);
 
-    if (metadata.getLastSyncTimestamp() == null && calenderPayload.isEmpty()) {
-      log.warn("Sync batch did not include Calender rows; metadata timestamp was not advanced");
+    // Record the wall-clock time of this sync run, regardless of the data dates it carried.
+    metadata.setLastSyncedAt(Instant.now());
+    metadataRepository.save(metadata);
+
+    if (metadata.getLastSyncDate() == null && calenderPayload.isEmpty()) {
+      log.warn("Sync batch did not include Calender rows; metadata date was not advanced");
     }
 
-    return new SyncIngestResponse(
-        latestPayload.size(), calenderPayload.size(), metadata.getLastSyncTimestamp());
+    return new SyncIngestResponse(calenderPayload.size(), metadata.getLastSyncDate());
   }
 
   private void updateLastSync(
-      SyncMetadata metadata,
-      List<RemoteLubricationPointPayload> latestPayload,
-      List<RemoteLubricationPointPayload> calenderPayload) {
-    Optional<LocalDateTime> maxTimestamp =
-        java.util.stream.Stream.concat(latestPayload.stream(), calenderPayload.stream())
-            .map(RemoteLubricationPointPayload::timestamp)
-            .filter(ts -> ts != null)
+      SyncMetadata metadata, List<RemoteLubricationPointPayload> calenderPayload) {
+    Optional<LocalDate> maxDate =
+        calenderPayload.stream()
+            .map(RemoteLubricationPointPayload::actualDate)
+            .filter(date -> date != null)
             .max(Comparator.naturalOrder());
 
-    maxTimestamp.ifPresent(
-        ts -> {
-          metadata.setLastSyncTimestamp(ts);
+    maxDate.ifPresent(
+        date -> {
+          metadata.setLastSyncDate(date);
           metadataRepository.save(metadata);
         });
   }
@@ -102,36 +95,21 @@ public class DataSyncService {
     return payload == null ? Collections.emptyList() : payload;
   }
 
-  private void upsertSnapshot(RemoteLubricationPointPayload response) {
-    if (response.name() == null) {
-      log.warn("Skipping entry with null name: {}", response);
-      return;
-    }
-
-    LubricationPointSnapshot snapshot =
-        snapshotRepository
-            .findById(response.name())
-            .orElseGet(() -> new LubricationPointSnapshot(response.name(), null, null, null, null));
-
-    snapshot.setInterval(response.actualInterval());
-    snapshot.setPlannedAmount(toBigDecimal(response.plannedAmount()));
-    snapshot.setActualAmount(toBigDecimal(response.actualAmount()));
-    snapshot.setTimestamp(response.timestamp());
-
-    snapshotRepository.save(snapshot);
-  }
-
   private void upsertCalender(RemoteLubricationPointPayload response) {
-    if (response.name() == null || response.timestamp() == null) {
+    if (response.sourceIndex() == null || response.name() == null || response.actualDate() == null) {
       return;
     }
 
-    CalenderSnapshotId id = new CalenderSnapshotId(response.name(), response.timestamp());
     CalenderSnapshot calender =
         calenderSnapshotRepository
-            .findById(id)
-            .orElseGet(() -> new CalenderSnapshot(id, null, null, null, null));
+            .findById(response.sourceIndex())
+            .orElseGet(
+                () ->
+                    new CalenderSnapshot(
+                        response.sourceIndex(), response.name(), null, null, null, null, null));
 
+    calender.setName(response.name());
+    calender.setActualDate(response.actualDate());
     calender.setActualInterval(response.actualInterval());
     calender.setLubricator(response.lubricator());
     calender.setPlannedAmount(toBigDecimal(response.plannedAmount()));

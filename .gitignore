@@ -13,3 +13,5 @@ frontend/App_Marsa/dist
 target/
 node_modules/
 .DS_Store
+.claude/
+docs/

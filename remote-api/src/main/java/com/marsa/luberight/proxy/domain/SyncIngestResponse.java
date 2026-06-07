@@ -1,6 +1,5 @@
 package com.marsa.luberight.proxy.domain;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
-public record SyncIngestResponse(
-    int latestSnapshotCount, int calenderHistoryCount, LocalDateTime lastSyncTimestamp) {}
+public record SyncIngestResponse(int calenderHistoryCount, LocalDate lastSyncDate) {}

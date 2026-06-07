@@ -22,6 +22,12 @@ interface InteractiveDiagramProps {
   onPointClick?: (point: DiagramPoint) => void;
   onPointHover?: (point: DiagramPoint | null) => void;
   onLubricationData?: (map: Map<string, LubricationPointDto>) => void;
+  /**
+   * When provided, the diagram renders this lubrication data (e.g. filtered to a selected
+   * execution date) instead of fetching latest-state per marker. The internal batch fetch is
+   * skipped while an override is set.
+   */
+  dataMapOverride?: Map<string, LubricationPointDto>;
   disablePopup?: boolean;
   initialActivePointId?: string;
 }
@@ -55,6 +61,7 @@ const InteractiveDiagram = ({
   onPointClick,
   onPointHover,
   onLubricationData,
+  dataMapOverride,
   disablePopup = false,
   initialActivePointId = '',
 }: InteractiveDiagramProps) => {
@@ -87,8 +94,12 @@ const InteractiveDiagram = ({
     return [...names];
   }, [points]);
 
-  // Batch fetch all markers at once (replaces individual polling)
-  const { lubricationDataMap } = useLubricationPointBatch(allMarkerDbNames);
+  // Batch fetch all markers at once (replaces individual polling). When an override map is
+  // supplied (date-filtered data from the dashboard), skip the latest-state fetch entirely.
+  const { lubricationDataMap: fetchedDataMap } = useLubricationPointBatch(
+    dataMapOverride ? [] : allMarkerDbNames,
+  );
+  const lubricationDataMap = dataMapOverride ?? fetchedDataMap;
 
   useEffect(() => {
     onLubricationData?.(lubricationDataMap);
@@ -214,9 +225,9 @@ const InteractiveDiagram = ({
 
   return (
     <section className={`interactive-diagram interactive-diagram--${size}`} aria-label={title}>
-      {showHeader ? (
+      {showHeader && (title || subtitle) ? (
         <header className="interactive-diagram__header">
-          <h1 className="interactive-diagram__title">{title}</h1>
+          {title ? <h1 className="interactive-diagram__title">{title}</h1> : null}
           {subtitle ? <p className="interactive-diagram__subtitle">{subtitle}</p> : null}
         </header>
       ) : null}

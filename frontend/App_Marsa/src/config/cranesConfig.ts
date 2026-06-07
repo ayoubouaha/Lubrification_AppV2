@@ -89,8 +89,8 @@ export const cranes: Record<CraneId, CraneConfig> = {
   }),
   ardelt: buildCraneConfig({
     id: 'ardelt',
-    name: 'KRANBAU K1, K2 (38T)',
-    dashboardLabel: '1. KRANBAU K1, K2 (38T)',
+    name: 'K3 · G403001',
+    dashboardLabel: '1. K3 · G403001',
     category: 'rail',
     hasData: true,
     dashboardImage: grueImage,
@@ -103,8 +103,8 @@ export const cranes: Record<CraneId, CraneConfig> = {
   }),
   tukan: buildCraneConfig({
     id: 'tukan',
-    name: 'TUKAN 2, 3 (40T)',
-    dashboardLabel: '3. TUKAN 2, 3 (40T)',
+    name: 'T2 · G403002',
+    dashboardLabel: '3. T2 · G403002',
     category: 'rail',
     hasData: true,
     dashboardImage: grueImage,

@@ -1,0 +1,122 @@
+.analysis {
+  margin-bottom: 28px;
+}
+
+.analysis__header {
+  margin-bottom: 14px;
+}
+
+.analysis__eyebrow {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-display);
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.analysis__eyebrow::before {
+  content: '';
+  width: 26px;
+  height: 2px;
+  background: var(--accent);
+}
+
+.analysis__grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 1080px) {
+  .analysis__grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.analysis-card {
+  background: var(--surface-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 16px 18px 10px;
+  min-width: 0;
+}
+
+.analysis-card__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.analysis-card__subtitle {
+  margin: 4px 0 10px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.analysis-chart__legend {
+  list-style: none;
+  margin: 0 0 6px;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px 16px;
+}
+
+.analysis-chart__legend-item {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.74rem;
+  color: var(--text-secondary);
+}
+
+.analysis-chart__swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  margin-right: 6px;
+}
+
+.analysis-chart__svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.analysis-chart__grid {
+  stroke: var(--border-color);
+  stroke-width: 1;
+  stroke-dasharray: 2 4;
+}
+
+.analysis-chart__ylabel,
+.analysis-chart__xlabel {
+  fill: var(--text-secondary);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.analysis-chart__ylabel {
+  text-anchor: end;
+}
+
+.analysis-chart__xlabel {
+  text-anchor: middle;
+}
+
+.analysis-card__empty {
+  padding: 2.5rem 0;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}

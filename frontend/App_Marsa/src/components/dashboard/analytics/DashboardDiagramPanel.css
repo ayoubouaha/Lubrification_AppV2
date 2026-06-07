@@ -8,6 +8,34 @@
   animation-delay: 520ms;
 }
 
+.diagram-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.diagram-panel__expand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex: none;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+.diagram-panel__expand:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
 .diagram-panel__eyebrow {
   margin: 0;
   display: inline-flex;
@@ -117,6 +145,37 @@
     grid-template-columns: minmax(0, 1fr) 320px;
     align-items: start;
   }
+}
+
+.diagram-panel__aside {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+  min-width: 0;
+}
+
+/* Fullscreen overlay when expanded. */
+.diagram-panel--expanded {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  margin: 0;
+  padding: 24px;
+  border-radius: 0;
+  overflow: auto;
+  background: var(--page-bg, #0f172a);
+  animation: none;
+  opacity: 1;
+  transform: none;
+}
+
+.diagram-panel--expanded .diagram-panel__stage {
+  min-height: 70vh;
+}
+
+.diagram-panel--expanded .diagram-panel__view {
+  display: flex;
+  flex-direction: column;
 }
 
 .diagram-panel__stage {

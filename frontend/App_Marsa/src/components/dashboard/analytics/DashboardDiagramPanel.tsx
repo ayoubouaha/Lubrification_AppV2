@@ -1,11 +1,19 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { Maximize2, Minimize2 } from 'lucide-react';
 import { cranes, type CraneConfig } from '../../../config/cranesConfig';
 import InteractiveDiagram from '../../diagram/InteractiveDiagram/InteractiveDiagram';
 import type { DiagramPoint } from '../../diagram/types';
 import type { LubricationPointDto } from '../../../types/lubricationPoint';
-import { getDbNameCandidates, resolveLubricationStatus } from '../../diagram/diagramPointUtils';
+import {
+  getDbNameCandidates,
+  resolveLubricationGrade,
+  expandSinglePointMarkers,
+} from '../../diagram/diagramPointUtils';
 import { CRANE_SYSTEMS, getSystemById } from './craneSystemDiagrams';
 import PointDetailCard, { type ViewStats } from './PointDetailCard';
+import DosageLegend from './DosageLegend';
+import { usePointHistory } from '../../../hooks/usePointHistory';
 import './DashboardDiagramPanel.css';
 
 export interface DiagramSelection {
@@ -18,9 +26,15 @@ export interface DiagramSelection {
 
 interface DashboardDiagramPanelProps {
   selection?: DiagramSelection | null;
+  /**
+   * Date-filtered lubrication data for the selected execution date (+ graisseur). Drives the
+   * marker colours, the side detail card and the view stats so the schema reflects the selected
+   * date instead of latest-state.
+   */
+  dataMap: Map<string, LubricationPointDto>;
 }
 
-const DashboardDiagramPanel = ({ selection }: DashboardDiagramPanelProps) => {
+const DashboardDiagramPanel = ({ selection, dataMap }: DashboardDiagramPanelProps) => {
   const availableCranes = useMemo<CraneConfig[]>(
     () => Object.values(cranes).filter(crane => crane.hasData),
     [],
@@ -29,9 +43,12 @@ const DashboardDiagramPanel = ({ selection }: DashboardDiagramPanelProps) => {
   const [craneId, setCraneId] = useState<string>(availableCranes[0]?.id ?? '');
   const [systemId, setSystemId] = useState<string>(CRANE_SYSTEMS[0].id);
   const [hoveredPoint, setHoveredPoint] = useState<DiagramPoint | null>(null);
+  // The last clicked point stays in the card; hovering only previews on top of it.
+  const [pinnedPoint, setPinnedPoint] = useState<DiagramPoint | null>(null);
   const [focusPointId, setFocusPointId] = useState<string>('');
-  const [dataMap, setDataMap] = useState<Map<string, LubricationPointDto>>(new Map());
+  const [isExpanded, setIsExpanded] = useState(false);
   const sectionRef = useRef<HTMLElement | null>(null);
+  const pointHistory = usePointHistory();
 
   const crane = useMemo(
     () => availableCranes.find(item => item.id === craneId) ?? availableCranes[0],
@@ -39,7 +56,14 @@ const DashboardDiagramPanel = ({ selection }: DashboardDiagramPanelProps) => {
   );
 
   const system = getSystemById(systemId);
-  const views = useMemo(() => (crane ? system.getViews(crane) : []), [crane, system]);
+  const views = useMemo(
+    () =>
+      (crane ? system.getViews(crane) : []).map(view => ({
+        ...view,
+        points: expandSinglePointMarkers(view.points),
+      })),
+    [crane, system],
+  );
 
   // Once the targeted system is rendered, surface the focused point in the side card.
   useEffect(() => {
@@ -53,8 +77,25 @@ const DashboardDiagramPanel = ({ selection }: DashboardDiagramPanelProps) => {
     }
   }, [focusPointId, views]);
 
+  // Fullscreen overlay: close on Escape and lock background scroll while open.
   useEffect(() => {
+    if (!isExpanded) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsExpanded(false);
+    };
+    document.addEventListener('keydown', onKey);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isExpanded]);
+
+  useEffect(() => {
+    // Switching crane/system clears the card: the pinned point isn't in the new view.
     setHoveredPoint(null);
+    setPinnedPoint(null);
   }, [systemId, craneId]);
 
   // Apply an external "locate on schema" request coming from the anomalies panel.
@@ -67,14 +108,6 @@ const DashboardDiagramPanel = ({ selection }: DashboardDiagramPanelProps) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selection?.nonce]);
 
-  const mergeData = useCallback((incoming: Map<string, LubricationPointDto>) => {
-    setDataMap(previous => {
-      const next = new Map(previous);
-      incoming.forEach((value, key) => next.set(key, value));
-      return next;
-    });
-  }, []);
-
   const stats = useMemo<ViewStats>(() => {
     const result: ViewStats = { total: 0, conforme: 0, sousDose: 0, surDose: 0 };
     const seen = new Set<string>();
@@ -85,12 +118,13 @@ const DashboardDiagramPanel = ({ selection }: DashboardDiagramPanelProps) => {
           if (!data || seen.has(data.name)) return;
           seen.add(data.name);
           result.total += 1;
-          const { actualAmount: actual, plannedAmount: planned } = data;
-          if (actual !== null && planned !== null && planned > 0 && actual > planned) {
+          const grade = resolveLubricationGrade(data.actualAmount, data.plannedAmount);
+          if (grade === 'surdose') {
             result.surDose += 1;
-          } else if (resolveLubricationStatus(actual, planned) === 'green') {
+          } else if (grade === 'conforme') {
             result.conforme += 1;
           } else {
+            // sous-dosé + critique
             result.sousDose += 1;
           }
         });
@@ -105,11 +139,23 @@ const DashboardDiagramPanel = ({ selection }: DashboardDiagramPanelProps) => {
     return null;
   }
 
-  return (
-    <section className="diagram-panel" aria-label="Cartographie interactive" ref={sectionRef}>
+  const panel = (
+    <section
+      className={`diagram-panel${isExpanded ? ' diagram-panel--expanded' : ''}`}
+      aria-label="Cartographie interactive"
+      ref={sectionRef}
+    >
       <header className="diagram-panel__header">
         <p className="diagram-panel__eyebrow">Cartographie interactive</p>
-        <h2 className="diagram-panel__title">Points de graissage sur schéma technique</h2>
+        <button
+          type="button"
+          className="diagram-panel__expand"
+          onClick={() => setIsExpanded(value => !value)}
+          aria-label={isExpanded ? 'Réduire la cartographie' : 'Agrandir la cartographie'}
+          title={isExpanded ? 'Réduire' : 'Agrandir'}
+        >
+          {isExpanded ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+        </button>
       </header>
 
       <div className="diagram-panel__cranes" role="tablist" aria-label="Sélection de la grue">
@@ -163,20 +209,30 @@ const DashboardDiagramPanel = ({ selection }: DashboardDiagramPanelProps) => {
                 initialActivePointId={focusPointId}
                 disablePopup
                 onPointHover={setHoveredPoint}
-                onLubricationData={mergeData}
-                onPointClick={point => {
-                  const target = system.resolveLink?.(crane, point);
-                  if (target) setSystemId(target);
-                }}
+                dataMapOverride={dataMap}
+                onPointClick={point => setPinnedPoint(point)}
               />
             </div>
           ))}
         </div>
 
-        <PointDetailCard point={hoveredPoint} dataMap={dataMap} subtitle={subtitle} stats={stats} />
+        <div className="diagram-panel__aside">
+          <DosageLegend />
+          <PointDetailCard
+            point={hoveredPoint ?? pinnedPoint}
+            dataMap={dataMap}
+            subtitle={subtitle}
+            stats={stats}
+            history={pointHistory}
+          />
+        </div>
       </div>
     </section>
   );
+
+  // When expanded, render into <body> so the fixed overlay escapes any transformed ancestor
+  // (the dashboard's reveal animations create a containing block that would otherwise trap it).
+  return isExpanded ? createPortal(panel, document.body) : panel;
 };
 
 export default DashboardDiagramPanel;

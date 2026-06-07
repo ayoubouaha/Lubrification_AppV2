@@ -19,6 +19,8 @@ export interface MarkerMetadata {
   markerColor?: string;
   markerScale?: number;
   action?: 'relevage-drive-groups';
+  /** Horizontal gap (in %) used when this marker is split into single-point markers. Overrides the default. */
+  splitGapXPercent?: number;
 }
 
 export interface DiagramPoint extends MarkerMetadata, DiagramCoordinates {}

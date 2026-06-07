@@ -101,7 +101,7 @@ const buildDriveGroupsPoint = (
 ): DiagramPoint => {
   return {
     id,
-    name: id,
+    name: identifiers,
     shortDescription: 'Groupes d’entrainement',
     details: '',
     dbName,
@@ -109,25 +109,26 @@ const buildDriveGroupsPoint = (
     frequency: '',
     plannedAmount: '',
     markerColor,
+    // The pair is split into two single-point positions ~5% apart (original nudged left).
+    splitGapXPercent: 5,
     xPercent,
     yPercent,
   };
 };
 
-type Position = { suffix: string; xPercent: number; yPercent: number };
+/** A position carries a fixed pair of points (e.g. P01 + P02); each is split into its own marker. */
+type Position = { suffix: string; xPercent: number; yPercent: number; pair: [number, number] };
 
 type DriveGroupTemplate = {
   id: string;
-  first: number;
-  last: number;
   markerColor: string;
   positions: Position[];
 };
 
 const formatPoulieIdentifier = (index: number): string => `K3-POULIE-P${String(index).padStart(2, '0')}`;
 
-const buildIdentifierGroup = (first: number, last: number): { dbName: string; identifiers: string } => {
-  const values = Array.from({ length: last - first + 1 }, (_, offset) => formatPoulieIdentifier(first + offset));
+const buildPairIdentifiers = (pair: [number, number]): { dbName: string; identifiers: string } => {
+  const values = pair.map(formatPoulieIdentifier);
   return {
     dbName: values[0],
     identifiers: values.join(' / '),
@@ -137,60 +138,52 @@ const buildIdentifierGroup = (first: number, last: number): { dbName: string; id
 const DRIVE_GROUP_TEMPLATES: DriveGroupTemplate[] = [
   {
     id: 'P13-P16',
-    first: 13,
-    last: 16,
     markerColor: '34, 197, 94',
     positions: [
-      { suffix: 'a', xPercent: 80.77, yPercent: 18.84 },
-      { suffix: 'b', xPercent: 49.52, yPercent: 3.52 },
+      { suffix: 'a', xPercent: 80.77, yPercent: 18.84, pair: [13, 14] },
+      { suffix: 'b', xPercent: 49.52, yPercent: 3.52, pair: [15, 16] },
     ],
   },
   {
     id: 'P09-P12',
-    first: 9,
-    last: 12,
     markerColor: '59, 130, 246',
     positions: [
-      { suffix: 'a', xPercent: 43.51, yPercent: 34.39 },
-      { suffix: 'b', xPercent: 75.36, yPercent: 48.7 },
+      { suffix: 'a', xPercent: 43.51, yPercent: 34.39, pair: [9, 10] },
+      { suffix: 'b', xPercent: 75.36, yPercent: 48.7, pair: [11, 12] },
     ],
   },
   {
     id: 'P05-P08',
-    first: 5,
-    last: 8,
     markerColor: '234, 179, 8',
     positions: [
-      { suffix: 'a', xPercent: 53.12, yPercent: 48.22 },
-      { suffix: 'b', xPercent: 20.67, yPercent: 32 },
+      { suffix: 'a', xPercent: 53.12, yPercent: 48.22, pair: [5, 6] },
+      { suffix: 'b', xPercent: 20.67, yPercent: 32, pair: [7, 8] },
     ],
   },
   {
     id: 'P01-P04',
-    first: 1,
-    last: 4,
     markerColor: '168, 85, 247',
     positions: [
-      { suffix: 'a', xPercent: 47.32, yPercent: 78.46 },
-      { suffix: 'b', xPercent: 14.66, yPercent: 62.05 },
+      { suffix: 'a', xPercent: 47.32, yPercent: 78.46, pair: [1, 2] },
+      { suffix: 'b', xPercent: 14.66, yPercent: 62.05, pair: [3, 4] },
     ],
   },
 ];
 
-export const POULIES_DRIVE_GROUPS_POINTS: DiagramPoint[] = DRIVE_GROUP_TEMPLATES.flatMap(template => {
-  const { dbName, identifiers } = buildIdentifierGroup(template.first, template.last);
+export const POULIES_DRIVE_GROUPS_POINTS: DiagramPoint[] = DRIVE_GROUP_TEMPLATES.flatMap(template =>
+  template.positions.map(position => {
+    const { dbName, identifiers } = buildPairIdentifiers(position.pair);
 
-  return template.positions.map(position =>
-    buildDriveGroupsPoint(
+    return buildDriveGroupsPoint(
       `poulies-drive:${template.id}-${position.suffix}`,
       position.xPercent,
       position.yPercent,
       dbName,
       identifiers,
       template.markerColor,
-    ),
-  );
-});
+    );
+  }),
+);
 
 const swapPrefix = (value: string, fromPrefix: string, toPrefix: string) => {
   if (!value) {

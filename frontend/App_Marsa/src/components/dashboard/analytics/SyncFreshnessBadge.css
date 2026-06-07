@@ -1,0 +1,28 @@
+.sync-badge {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Same color and font as the "Date Exécutée" / "Graisseur" field labels. */
+.sync-badge__label {
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-secondary, #94a3b8);
+}
+
+.sync-badge__value {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  padding: 9px 0;
+}
+
+.sync-badge__value--offline {
+  color: var(--status-red);
+}

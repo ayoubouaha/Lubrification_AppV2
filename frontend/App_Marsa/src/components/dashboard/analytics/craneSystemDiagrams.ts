@@ -113,7 +113,7 @@ export const CRANE_SYSTEMS: SystemDef[] = [
       const tukan = isTukan(crane);
       return [
         {
-          title: "Groupes d'entraînement gauche",
+          title: '',
           subtitle: '',
           imageSrc: crane.images.rotationDriveGroups,
           imageAlt: "Schéma groupes d'entraînement gauche",
@@ -121,7 +121,7 @@ export const CRANE_SYSTEMS: SystemDef[] = [
           size: 'compact',
         },
         {
-          title: "Groupes d'entraînement droite",
+          title: '',
           subtitle: '',
           imageSrc: crane.images.rotationDriveGroups,
           imageAlt: "Schéma groupes d'entraînement droite",
