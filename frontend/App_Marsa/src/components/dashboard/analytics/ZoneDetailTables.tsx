@@ -40,7 +40,7 @@ const formatNumber = (value: number, fractionDigits = 0): string =>
 
 /** Amounts arrive from the backend already in grams; format without extra scaling. */
 const formatGrams = (value: number): string =>
-  value.toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 3 });
+  value.toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
 const ecartClass = (ecart: number | null): string => {
   if (ecart === null) return 'zone-detail__ecart--none';

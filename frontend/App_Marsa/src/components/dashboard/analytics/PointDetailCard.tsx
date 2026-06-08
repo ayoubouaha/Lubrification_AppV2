@@ -86,7 +86,7 @@ const fmt = (value: number | null | undefined, digits = 0): string =>
 const fmtGrams = (value: number | null | undefined): string =>
   value === null || value === undefined
     ? '—'
-    : value.toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 3 });
+    : value.toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
 const PointDetailCard = ({ point, dataMap, subtitle, stats, history }: PointDetailCardProps) => {
   const candidates = useMemo(() => (point ? getDbNameCandidates(point) : []), [point]);

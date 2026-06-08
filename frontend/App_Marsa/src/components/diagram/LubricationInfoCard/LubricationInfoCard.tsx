@@ -25,14 +25,8 @@ const formatGrams = (value: number | null): string => {
     return '';
   }
 
-  const formatted = Number.isInteger(value)
-    ? `${value}`
-    : value
-        .toFixed(3)
-        .replace(/(\.\d*?)0+$/, '$1')
-        .replace(/\.$/, '');
-
-  return `${formatted} g`;
+  // Round to the nearest whole gram: 220.49 -> 220, 220.50 -> 221.
+  return `${Math.round(value)} g`;
 };
 
 const formatPercentage = (value: number): string => {

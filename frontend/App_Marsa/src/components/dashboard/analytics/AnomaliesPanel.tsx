@@ -12,7 +12,8 @@ const PAGE_SIZE = 8;
 
 const formatAmount = (value: number | null): string => {
   if (value === null || value === undefined) return '—';
-  return `${Math.round((value + Number.EPSILON) * 100) / 100}`;
+  // Round to the nearest whole gram: 220.49 -> 220, 220.50 -> 221.
+  return `${Math.round(value)}`;
 };
 
 /** Lower score = more severe. Missing readings rank first. */

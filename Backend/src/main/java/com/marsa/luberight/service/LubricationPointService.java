@@ -13,8 +13,11 @@ import org.springframework.stereotype.Service;
 @Service
 public class LubricationPointService {
 
-  /** Source amounts are stored scaled x1000 (mg); the UI shows grams. */
+  /** Source amounts are stored scaled x1000; dividing by this gives the volume in cm³. */
   private static final BigDecimal AMOUNT_DIVISOR = BigDecimal.valueOf(1000);
+
+  /** Grease density (g/cm³): volume (cm³) × density = mass (g). */
+  private static final BigDecimal GREASE_DENSITY = BigDecimal.valueOf(0.87);
 
   private final LubricationPointRepository repository;
 
@@ -54,12 +57,16 @@ public class LubricationPointService {
         view.getLubricator());
   }
 
-  /** Convert raw source amount (x1000) to grams. */
+  /** Convert raw source amount (x1000) to grams: (raw / 1000) cm³ × density. */
   private Double normalizeAmount(BigDecimal amount) {
     if (amount == null) {
       return null;
     }
 
-    return amount.divide(AMOUNT_DIVISOR, 3, RoundingMode.HALF_UP).doubleValue();
+    return amount
+        .divide(AMOUNT_DIVISOR, 6, RoundingMode.HALF_UP) // raw → cm³
+        .multiply(GREASE_DENSITY) // cm³ → grams
+        .setScale(3, RoundingMode.HALF_UP)
+        .doubleValue();
   }
 }
